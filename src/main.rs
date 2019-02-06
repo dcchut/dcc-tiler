@@ -554,10 +554,14 @@ fn render_single_tiling(board : &RectangularBoard, tile_hashmap : &HashMap<Recta
 
 
     let colors = vec![Color(30,56,136),
-                      Color(71, 168, 189),
+                      Color(71, 115, 170),
                       Color(245, 230, 99),
                       Color(255, 173, 105),
-                      Color(156, 56, 72)];
+                      Color(156, 56, 72),
+                      //Color(95, 199, 227),
+        Color(124,178,135),
+        Color(251,219,136)
+    ];
 
     let mut boxes = Vec::new();
     let mut color_index = 0;
@@ -919,6 +923,11 @@ fn main() {
                  .help("The size of the board to tile")
                  .index(1)
                  .required(true))
+        .arg(Arg::with_name("width")
+                 .short("w")
+                 .long("width")
+                 .takes_value(true)
+                 .help("The (optional) width of the board"))
         .arg(Arg::with_name("board_type")
                  .help("The type of board to use")
                  .possible_values(&BoardType::variants())
@@ -966,6 +975,13 @@ fn main() {
     let board_type = value_t!(matches.value_of("board_type"), BoardType).unwrap_or_else(|e| e.exit());
     let tile_type = value_t!(matches.value_of("tile_type"), TileType).unwrap_or_else(|e| e.exit());
     let board_size = value_t!(matches.value_of("board_size"),usize).unwrap_or_else(|e| e.exit());
+
+    let board_width = if matches.is_present("width") {
+        value_t!(matches.value_of("width"), usize).unwrap_or_else(|e| e.exit())
+    } else {
+        board_size
+    };
+
     let tile_size = value_t!(matches.value_of("tile_size"), usize).unwrap_or_else(|e| e.exit());
     let board_scale = value_t!(matches.value_of("board_scale"), usize).unwrap_or_else(|e| e.exit());
 
@@ -982,22 +998,22 @@ fn main() {
     let tiles = TileCollection::from(tile);
 
     // closure to create a board
-    let make_board = |board_type : BoardType, board_size : usize, board_scale : usize| {
+    let make_board = |board_type : BoardType, board_size : usize, board_width : usize, board_scale : usize| {
         match board_type {
-            BoardType::Rectangle => RectangularBoard::new(board_size, board_size),
+            BoardType::Rectangle => RectangularBoard::new(board_width, board_size),
             BoardType::LBoard => RectangularBoard::l_board(board_size, board_scale),
             BoardType::TBoard => RectangularBoard::t_board(board_size, board_scale),
         }
     };
 
-    let board = make_board(board_type, board_size, board_scale);
+    let board = make_board(board_type, board_size, board_width,board_scale);
 
     // now, do some stuff
     if matches.is_present("scaling") {
         let mut board_scale : usize = 1;
 
         loop {
-            let tiler = Tiler::new(tiles.clone(), make_board(board_type, board_size, board_scale));
+            let tiler = Tiler::new(tiles.clone(), make_board(board_type, board_size, board_width,board_scale));
             println!("scale({}), {} tilings", board_scale, count_tilings(tiler));
             board_scale += 1;
         }
