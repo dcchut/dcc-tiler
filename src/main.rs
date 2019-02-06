@@ -90,11 +90,15 @@ impl Tile {
 
         let mut directions = Vec::new();
 
-        for _ in 0..length-1 {
+        for _ in 0..length {
             directions.push(Direction::Right);
         }
+        directions.push(Direction::Up);
+        directions.push(Direction::DownRight);
 
-        directions.push(Direction::UpLeft);
+        for _ in 0..(length - 1) {
+            directions.push(Direction::Right);
+        }
 
         Tile::new(directions)
     }
@@ -293,6 +297,31 @@ impl RectangularBoard {
         board
     }
 
+    /*class TBoard(Board):
+    def __init__(self, n):
+        super().__init__(2 * n, n ** 2)
+
+        for i in range(0, n):
+            for j in range(0, n):
+                self.board[n + i][j] = False
+                self.board[n + i][n ** 2 - n + j] = False
+                self.mark([n + i, j])
+                self.mark([n + i, n ** 2 - n + j])
+                */
+    pub fn t_board(n : usize, scale: usize) -> Self {
+        let mut board = RectangularBoard::new((2 * n + 1) * scale, 2 * scale);
+
+        for row in 0..scale {
+            for col in 0..(n * scale) {
+                board.board[row][col] = true;
+            }
+            for col in ((n+1) * scale)..((2 * n + 1) * scale) {
+                board.board[row][col] = true;
+            }
+        }
+
+        board
+    }
 
 
     fn mark(&mut self, p: &Position) {
@@ -814,7 +843,8 @@ arg_enum!{
     #[derive(Debug)]
     pub enum BoardType {
         Rectangle,
-        LBoard
+        LBoard,
+        TBoard,
     }
 }
 
@@ -890,6 +920,7 @@ fn main() {
             Tile::t_tile(tile_size)
         },
     };
+
     let tiles = TileCollection::from(tile);
 
     // next, set up the board
@@ -899,8 +930,13 @@ fn main() {
         },
         BoardType::LBoard => {
             RectangularBoard::l_board(board_size, board_scale)
-        }
+        },
+        BoardType::TBoard => {
+            RectangularBoard::t_board(board_size, board_scale)
+        },
     };
+
+    dbg!(&board);
 
     let tiler = Tiler::new(tiles, board);
 
