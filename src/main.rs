@@ -936,8 +936,6 @@ fn main() {
         },
     };
 
-    dbg!(&board);
-
     let tiler = Tiler::new(tiles, board);
 
     // now, do some stuff
