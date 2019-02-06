@@ -548,8 +548,10 @@ fn render_single_tiling_from_vec(boards : Vec<RectangularBoard>) -> Fig {
 
 
 fn render_single_tiling(board : &RectangularBoard, tile_hashmap : &HashMap<RectangularBoard, Vec<RectangularBoard>>) -> Fig {
-    let gap_size = 1.0;
+    let gap_size = 0.0;
     let box_size = 50.0;
+    let padding = 10.0;
+
 
     let colors = vec![Color(30,56,136),
                       Color(71, 168, 189),
@@ -566,19 +568,69 @@ fn render_single_tiling(board : &RectangularBoard, tile_hashmap : &HashMap<Recta
         let next = rand::thread_rng().gen_range(0, tile_hashmap[current].len());
         let next_board = tile_hashmap.get(current).unwrap().get(next).unwrap();
 
+        let mut tiled_positions = HashSet::new();
+
         // compute the tile that was placed here
         for y in 0..next_board.height {
             for x in 0..next_board.width {
                 if next_board.board[y][x] ^ current.board[y][x] {
-                    let rect = Fig::Rect((x as f32) * (box_size + gap_size),
-                                         (y as f32) * (box_size + gap_size),
-                                         box_size,
-                                         box_size)
-                        .styled(Attr::default().fill(colors[color_index]));
-
-                    boxes.push(rect);
+                    // we just tiled this position
+                    tiled_positions.insert((x,y));
                 }
             }
+        }
+
+        for (x,y) in tiled_positions.iter() {
+            // draw the underlying box
+            let rect = Fig::Rect((*x as f32) * (box_size + gap_size) + padding,
+                                 (*y as f32) * (box_size + gap_size)+padding,
+                                 box_size,
+                                 box_size)
+                .styled(Attr::default().fill(colors[color_index]));
+
+            boxes.push(rect);
+
+
+            enum Border {
+                Left,
+                Right,
+                Top,
+                Bottom
+            };
+
+            // helper function to construct our borders
+            let border = |x: usize, y: usize, b : Border, gray : bool| {
+                let xs = match b {
+                    Border::Right => (x as f32 + 1.0) * (box_size + gap_size) + padding - gap_size,
+                    _ => (x as f32) * (box_size + gap_size) + padding,
+                };
+                let ys = match b {
+                    Border::Top => (y as f32 + 1.0) * (box_size + gap_size) + padding - gap_size,
+                    _ => (y as f32) * (box_size + gap_size) + padding,
+                };
+                let xe = match b {
+                    Border::Left => (x as f32) * (box_size + gap_size) + padding,
+                    _ => (x as f32 + 1.0) * (box_size + gap_size) + padding - gap_size
+                };
+                let ye = match b {
+                    Border::Bottom => (y as f32) * (box_size + gap_size) + padding,
+                    _ => (y as f32 + 1.0) * (box_size + gap_size) + padding - gap_size,
+                };
+
+                let mut b = Fig::Line(xs, ys, xe, ye);
+                b = b.styled(Attr::default().stroke(if gray { Color(211, 211, 211) } else { Color(0, 0, 0) }).stroke_width(0.5));
+
+                b
+            };
+
+            // left border
+            boxes.push(border(*x, *y, Border::Left, tiled_positions.contains(&(*x-1, *y))));
+            // right border
+            boxes.push(border(*x,*y, Border::Right, tiled_positions.contains(&(*x+1,*y))));
+            // top border
+            boxes.push(border(*x,*y,Border::Top, tiled_positions.contains(&(*x,*y+1))));
+            // bottom border
+            boxes.push(border(*x,*y,Border::Bottom, tiled_positions.contains(&(*x,*y-1))));
         }
 
         // increment the color index by 1
@@ -840,7 +892,7 @@ pub fn compute_boardgraph(tiler : Tiler) -> BoardGraph {
 }
 
 arg_enum!{
-    #[derive(Debug)]
+    #[derive(Debug, Copy, Clone)]
     pub enum BoardType {
         Rectangle,
         LBoard,
@@ -849,7 +901,7 @@ arg_enum!{
 }
 
 arg_enum!{
-    #[derive(Debug)]
+    #[derive(Debug, Copy, Clone)]
     pub enum TileType {
         LTile,
         TTile
@@ -903,6 +955,12 @@ fn main() {
                  .help("Computes the full tilings graph")
                  .conflicts_with("count")
                  .conflicts_with("single"))
+        .arg(Arg::with_name("scaling")
+                 .long("scaling")
+                 .help("Computes the tiling count for different values of the scale parameter")
+                 .conflicts_with("graph")
+                 .conflicts_with("count")
+                 .conflicts_with("single"))
         .get_matches();
 
     let board_type = value_t!(matches.value_of("board_type"), BoardType).unwrap_or_else(|e| e.exit());
@@ -923,25 +981,31 @@ fn main() {
 
     let tiles = TileCollection::from(tile);
 
-    // next, set up the board
-    let board = match board_type {
-        BoardType::Rectangle => {
-            RectangularBoard::new(board_size, board_size)
-        },
-        BoardType::LBoard => {
-            RectangularBoard::l_board(board_size, board_scale)
-        },
-        BoardType::TBoard => {
-            RectangularBoard::t_board(board_size, board_scale)
-        },
+    // closure to create a board
+    let make_board = |board_type : BoardType, board_size : usize, board_scale : usize| {
+        match board_type {
+            BoardType::Rectangle => RectangularBoard::new(board_size, board_size),
+            BoardType::LBoard => RectangularBoard::l_board(board_size, board_scale),
+            BoardType::TBoard => RectangularBoard::t_board(board_size, board_scale),
+        }
     };
 
-    let tiler = Tiler::new(tiles, board);
+    let board = make_board(board_type, board_size, board_scale);
 
     // now, do some stuff
-    if matches.is_present("count") {
-        dbg!(count_tilings(tiler));
+    if matches.is_present("scaling") {
+        let mut board_scale : usize = 1;
+
+        loop {
+            let tiler = Tiler::new(tiles.clone(), make_board(board_type, board_size, board_scale));
+            println!("scale({}), {} tilings", board_scale, count_tilings(tiler));
+            board_scale += 1;
+        }
+    } else if matches.is_present("count") {
+        dbg!(count_tilings(Tiler::new(tiles, board)));
     } else if matches.is_present("single") {
+        let tiler = Tiler::new(tiles, board);
+
         // render a single tiling
         let tiling = get_single_tiling(tiler);
 
@@ -955,6 +1019,8 @@ fn main() {
             println!("No tilings found!");
         }
     } else if matches.is_present("graph") {
+        let tiler = Tiler::new(tiles, board);
+
         // compute the entire boardgraph for this tiler
         let board_graph = compute_boardgraph(tiler);
 
