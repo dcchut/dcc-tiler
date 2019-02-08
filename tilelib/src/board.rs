@@ -1,4 +1,4 @@
-use crate::tile::{Tile, TilePosition, Position, Direction};
+use crate::tile::{Tile, TilePosition, Position, Direction, TileCollection};
 use std::collections::{HashSet, HashMap};
 use serde_derive::Serialize;
 
@@ -11,15 +11,31 @@ pub struct RectangularBoard {
     pub height : usize,
 
     pub board : Vec<Vec<bool>>,
+
+    #[serde(skip_serializing)]
+    counts : Vec<Vec<usize>>,
 }
 
 
 impl RectangularBoard {
     pub fn new(width : usize, height : usize) -> Self {
+        let mut counts = vec![vec![0 ; width] ; height ];
+
+        for i in 0..height {
+            counts[i][0] = 1;
+            counts[i][width - 1] = 1;
+        }
+        for j in 0..width {
+            counts[0][j] = 1;
+            counts[height - 1][j] = 1;
+        }
+
+
         RectangularBoard {
             width,
             height,
             board : vec![vec![false ; width] ; height],
+            counts : counts,
         }
     }
 
@@ -55,7 +71,7 @@ impl RectangularBoard {
             for col in 0..(n * scale) {
                 board.board[row][col] = true;
             }
-            for col in ((n+1) * scale)..((2 * n + 1) * scale) {
+            for col in ((n + 1) * scale)..((2 * n + 1) * scale) {
                 board.board[row][col] = true;
             }
         }
@@ -65,6 +81,24 @@ impl RectangularBoard {
 
 
     fn mark(&mut self, p: &Position) {
+        for xp in (p.x-1)..=(p.x+1) {
+            if xp == p.x {
+                continue;
+            }
+            if self.is_valid(&Position::new(xp,p.y)) {
+                self.counts[xp as usize][p.y as usize] += 1;
+            }
+        }
+        for yp in (p.y-1)..=(p.y+1) {
+            if yp == p.y {
+                continue;
+            }
+            if self.is_valid(&Position::new(p.x, yp)) {
+                self.counts[p.x as usize][yp as usize] += 1;
+            }
+        }
+
+
         self.board[p.x as usize][p.y as usize] = true;
     }
 
@@ -84,6 +118,55 @@ impl RectangularBoard {
             }
         }
         true
+    }
+
+
+    pub fn place_tile(&self, tile_collection : &TileCollection) -> Vec<RectangularBoard> {
+        let mut largest_count = None;
+        let mut largest_position = None;
+
+        // find the position with the highest count
+        for j in 0..self.width {
+            for i in 0..self.height {
+                if !self.board[i][j] {
+                    let count = self.counts[i][j];
+                    // TODO : maybe deal with stupid case where we're allowed a 1x1 piece
+                    // this spot cannot be tiled
+                    if count == 4 {
+                        return Vec::new();
+                    }
+
+                    if largest_count.is_none() || self.counts[i][j] > largest_count.unwrap() {
+                        largest_count = Some(self.counts[i][j]);
+                        largest_position = Some((i,j));
+                    }
+                }
+            }
+        }
+
+
+        let mut fitting_tiles = Vec::new();
+
+        if let Some((i,j)) = largest_position {
+            for tile in tile_collection.tiles.iter() {
+                for start_index in 0..=tile.directions.len() {
+                    if let Some(tp) = self.tile_fits_at_position(tile, Position::new(i as i32, j as i32), start_index) {
+                        // we really should be using a HashSet for fitting_tiles, but
+                        // I haven't figured out how to put a TilePosition in a HashSet,
+                        // so we just check for containment here instead
+                        if !fitting_tiles.contains(&tp) {
+                            fitting_tiles.push(tp);
+                        }
+                    }
+                }
+            }
+        }
+
+        fitting_tiles.into_iter().map(|tp| {
+            let mut child_board = self.clone();
+            child_board.mark_tile_at_position(tp);
+            child_board
+        }).collect()
     }
 
     // TODO: document

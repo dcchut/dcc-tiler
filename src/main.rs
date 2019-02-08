@@ -1,74 +1,225 @@
 extern crate tilelib;
 
-use tilelib::tile::{TilePosition, TileCollection, Tile};
+use tilelib::tile::{TileCollection, Tile};
 use tilelib::board::RectangularBoard;
-use tilelib::render::render_single_tiling_from_vec;
+//use tilelib::render::render_single_tiling_from_vec;
+use tilelib::graph::BoardGraph;
 
 use std::collections::{HashSet,HashMap};
 use std::sync::{Arc, RwLock};
 use rayon::prelude::*;
-use serde_derive::Serialize;
 use clap::{Arg, App};
-use rand::Rng;
+//use rand::Rng;
 
 #[macro_use]
 extern crate clap;
 
-#[derive(Debug, Serialize)]
-pub struct BoardGraph {
-    // The nodes in our graph are boards - we store there here inside a vec
-    //// so that we dont have Rc<RefCell<..>> all over the place
-    nodes_arena : Vec<RectangularBoard>,
-
-    #[serde(skip_serializing)]
-    nodes_arena_index : usize,
-
-    // An edge in our graph indicates that it is possible to get from one board state
-    // to another by placing down a tile.
-    edges : HashMap<usize, HashSet<usize>>,
-
-    // If a complete tiling of an initial board (index 0 in nodes_arena)
-    complete_index : Option<usize>,
-}
-
-impl BoardGraph {
-    pub fn new() -> Self {
-        BoardGraph {
-            nodes_arena : Vec::new(),
-            nodes_arena_index : 0,
-            edges : HashMap::new(),
-            complete_index : None,
-        }
-    }
-
-    pub fn add_node(&mut self, val : RectangularBoard) -> usize {
-        self.nodes_arena.push(val);
-
-        self.nodes_arena_index += 1;
-        self.nodes_arena_index - 1
-    }
-
-    pub fn add_edge(&mut self, s : usize, t : usize) {
-        assert!(s < self.nodes_arena_index && t < self.nodes_arena_index);
-
-        self.edges.entry(s).or_insert_with(HashSet::new).insert(t);
-    }
-}
-
 
 pub struct Tiler {
     tiles: TileCollection,
-    board: RectangularBoard,
+    initial_board: RectangularBoard,
+    graph : Option<Arc<RwLock<BoardGraph>>>,
 }
 
 impl Tiler {
-    pub fn new(tiles : TileCollection, board : RectangularBoard) -> Self {
+    pub fn new(tiles : TileCollection, initial_board : RectangularBoard) -> Self {
         Tiler {
             tiles,
-            board,
+            initial_board,
+            graph : None,
         }
     }
+
+    pub fn count_tilings(&mut self) -> u64 {
+        // if we have a boardgraph, use it
+        if !self.graph.is_none() {
+            self.count_tilings_from_graph()
+        } else {
+            self.count_tilings_quick()
+        }
+    }
+
+    fn count_tilings_quick(&self) -> u64 {
+        // we keep the counter behind an Arc<RwLock<>>
+        let mut counter = HashMap::new();
+        counter.insert(self.initial_board.clone(), 1);
+        let mut counter = Arc::new(RwLock::new(counter));
+
+        // our working stack
+        let mut stack = HashSet::new();
+        stack.insert(self.initial_board.clone());
+
+        let completed_board = Arc::new(RwLock::new(Vec::new()));
+
+        while !stack.is_empty() {
+            let handles = stack.par_iter().map(|b| {
+                let current_count = counter.read().unwrap()[&b];
+
+                let boards = b.place_tile(&self.tiles);
+
+                let mut next_boards = HashSet::new();
+                let mut completed_boards = HashSet::new();
+                let mut count_updates = HashMap::new();
+
+                for board in boards {
+                    *count_updates.entry(board.clone()).or_insert(0) += current_count;
+
+                    if board.is_all_marked() {
+                        completed_boards.insert(board);
+                    } else {
+                        next_boards.insert(board);
+                    }
+                }
+
+                (next_boards, completed_boards, count_updates)
+            }).collect::<Vec<_>>();
+
+            let step_stack = Arc::new(RwLock::new(HashSet::new()));
+            counter = Arc::new(RwLock::new(HashMap::new()));
+
+            handles.into_par_iter().for_each(|(next_boards, completed_boards, count_updates)| {
+                // extend the new stack
+                {
+                    let mut stack_write = step_stack.write().unwrap();
+                    stack_write.extend(next_boards);
+                }
+
+                // update all of the tiling counts
+                {
+                    let mut counter_write = counter.write().unwrap();
+
+                    // update the counts
+                    for (board, count) in count_updates {
+                        let entry = counter_write.entry(board).or_insert(0);
+                        (*entry) += count;
+                    }
+                }
+
+
+                // mark the completed board
+                for board in completed_boards {
+                    // we obtain the lock on completed_board inside this for loop,
+                    // because having a completed board occurs so infrequently
+                    {
+                        let mut completed_board_write = completed_board.write().unwrap();
+                        completed_board_write.push(board);
+                    }
+                }
+            });
+
+            // unwrap our stack
+            stack = Arc::try_unwrap(step_stack).unwrap().into_inner().unwrap();
+        }
+
+        let completed_board = completed_board.read().unwrap();
+
+        for board in completed_board.iter() {
+            return counter.read().unwrap()[board];
+        }
+
+        0
+    }
+
+    fn count_tilings_from_graph(&self) -> u64 {
+        let graph = Arc::clone(self.graph.as_ref().unwrap());
+        let g = graph.read().unwrap();
+
+        // if the graph doesn't have any complete tilings,
+        // then we don't have to do any work
+        let complete_board_index = g.get_complete_index();
+
+        if complete_board_index.is_none() {
+            return 0;
+        }
+
+        let mut count_map = HashMap::new();
+        count_map.insert(0, 1);
+
+        // now work through the stack
+        let mut stack = HashSet::new();
+        stack.insert(0);
+
+        while !stack.is_empty() {
+            let mut next_stack = HashSet::new();
+
+            for board_index in stack {
+                let c = count_map[&board_index];
+
+                if let Some(edges) = g.get_edges(board_index) {
+                    for edge in edges {
+                        let entry = count_map.entry(*edge).or_insert(0);
+                        (*entry) += c;
+
+                        next_stack.insert(*edge);
+
+                    }
+                }
+            }
+
+            stack = next_stack;
+        }
+
+        *count_map.entry(complete_board_index.unwrap()).or_insert(0)
+    }
+
+    fn generate_graph(&mut self) {
+        let mut graph = BoardGraph::new();
+        graph.add_node(self.initial_board.clone());
+
+        let graph = Arc::new(RwLock::new(graph));
+
+        let mut stack = vec![0];
+
+        while !stack.is_empty() {
+            let mut next_iteration = Vec::new();
+            let mut board_map : HashMap<RectangularBoard, usize> = HashMap::new();
+
+
+            for (board_index, child_boards) in stack.into_par_iter().map(|board_index| {
+                let g = graph.read().unwrap();
+
+                // get the current board
+                (board_index, if let Some(board) = g.get_node(board_index) {
+                    // now for each board, place a tile at some position,
+                    board.place_tile(&self.tiles)
+                } else {
+                    Vec::new()
+                })
+            }).collect::<Vec<_>>() {
+                // find / create the node id for this board
+                let mut g = graph.write().unwrap();
+
+                for board in child_boards {
+                    let complete = board.is_all_marked();
+
+                    // add the board to our graph
+                    let child_index = if board_map.contains_key(&board) {
+                        board_map[&board]
+                    } else {
+                        let index = g.add_node(board.clone());
+                        board_map.insert(board, index);
+                        index
+                    };
+
+                    g.add_edge(board_index, child_index);
+
+                    if complete {
+                        // mark this as a finished node in our graph
+                        g.mark_node_as_complete(child_index);
+                    } else {
+                        next_iteration.push(child_index);
+                    }
+                }
+            }
+
+            stack = next_iteration;
+        }
+        self.graph = Some(graph);
+    }
 }
+
+/*
+TODO - implement get_single_tiling
 
 pub fn get_single_tiling(tiler : Tiler) -> Option<Vec<RectangularBoard>> {
     let mut stack = Vec::new();
@@ -125,185 +276,7 @@ pub fn get_single_tiling(tiler : Tiler) -> Option<Vec<RectangularBoard>> {
     None
 }
 
-
-pub fn count_tilings(tiler : Tiler) -> u64 {
-    // at each stage, keep track of the counts
-    let mut counter = HashMap::new();
-    counter.insert(tiler.board.clone(), 1);
-
-    let mut counter = Arc::new(RwLock::new(counter));
-
-    let tiler_ref = Arc::new(RwLock::new(tiler.tiles.tiles.clone()));
-
-    let mut stack = HashSet::new();
-    stack.insert(tiler.board.clone());
-
-    let mut completed_board = None;
-
-    while !stack.is_empty() {
-        let handles = stack.par_iter().map(|b| {
-            let current_tiler_ref = Arc::clone(&tiler_ref);
-            let current_counter_ref = Arc::clone(&counter);
-
-            let mut next_boards = HashSet::new();
-            let mut completed_boards = HashSet::new();
-            let mut count_updates = HashMap::new();
-
-            if let Some(p) = b.get_unmarked_position(&current_tiler_ref.read().unwrap()) {
-                let mut fitting_tiles = Vec::new();
-
-                for tile in current_tiler_ref.read().unwrap().iter() {
-                    for start_index in 0..=tile.directions.len() {
-                        if let Some(tile_position) = b.tile_fits_at_position(tile, p, start_index) {
-                            if !fitting_tiles.contains(&tile_position) {
-                                fitting_tiles.push(tile_position);
-                            }
-                        }
-                    }
-                }
-
-                for tp in fitting_tiles {
-                    let mut marked_board = b.clone();
-                    marked_board.mark_tile_at_position(tp);
-
-                    // how many tilings does the previous state have?
-                    let current_count = current_counter_ref.read().unwrap()[&b];
-
-                    *count_updates.entry(marked_board.clone()).or_insert(0) += current_count;
-
-                    if marked_board.is_all_marked() {
-                        completed_boards.insert(marked_board);
-                    } else {
-                        next_boards.insert(marked_board);
-                    }
-                }
-            }
-
-            (next_boards, completed_boards, count_updates)
-        }).collect::<Vec<_>>();
-
-        stack = HashSet::new();
-        counter = Arc::new(RwLock::new(HashMap::new()));
-
-        for (next_boards, completed_boards, count_updates) in handles {
-            stack.extend(next_boards);
-
-            {
-                let mut write = counter.write().unwrap();
-
-                // update the counts
-                for (board, cnt) in count_updates {
-                    let entry = write.entry(board).or_insert(0);
-                    (*entry) += cnt;
-                }
-            }
-
-            for board in completed_boards {
-                completed_board = Some(board);
-            }
-        }
-    }
-
-    if let Some(completed_board) = completed_board {
-        counter.read().unwrap()[&completed_board]
-    } else {
-        0
-    }
-}
-
-pub fn compute_boardgraph(tiler : Tiler) -> BoardGraph {
-    let mut hashm = HashMap::new();
-    let mut completed_boards = HashSet::new();
-
-    let mut board_graph = BoardGraph::new();
-    let mut board_graph_hashmap = HashMap::new();
-
-    let board = tiler.board.clone();
-    let tiles = tiler.tiles.clone();
-
-    // add the starting board to our hashmap & graoh
-    board_graph_hashmap.insert(board.clone(), board_graph.add_node(board.clone()));
-
-    let mut stack = HashSet::new();
-    stack.insert(board);
-
-    while !stack.is_empty() {
-        let handles : Vec<_> = stack.into_par_iter().map(|b| {
-            let mut to_stack = Vec::new();
-            let mut to_hash = HashMap::new();
-            let mut to_completed = Vec::new();
-
-            if let Some(p) = b.get_unmarked_position(&tiles.tiles) {
-                let mut fitting_tiles: Vec<TilePosition> = Vec::new();
-
-                for tile in &tiles.tiles {
-                    for start_index in 0..=tile.directions.len() {
-                        if let Some(tp) = b.tile_fits_at_position(tile, p, start_index) {
-                            if !fitting_tiles.contains(&tp) {
-                                fitting_tiles.push(tp);
-                            }
-                        }
-                    }
-                }
-
-                let mut next_board = HashMap::new();
-
-                // now for each fitting tile, mark our board with this tile & add it to the stack
-                for tp in fitting_tiles {
-                    let mut marked_board = b.clone();
-                    marked_board.mark_tile_at_position(tp.clone());
-
-                    next_board.entry(marked_board).or_insert_with(Vec::new).push(tp);
-                }
-
-
-                for (k, _) in next_board.into_iter() {
-                    to_hash.entry(k.clone()).or_insert_with(Vec::new).push(b.clone());
-                    if k.is_all_marked() {
-                        to_completed.push(k);
-                    } else {
-                        to_stack.push(k);
-                    }
-                }
-            }
-
-            (to_stack, to_hash, to_completed)
-        }).collect();
-
-        // now merge the results back in
-        stack = HashSet::new();
-
-        for (to_stack, to_hash, to_completed) in handles {
-            // merge everything in
-            stack.extend(to_stack);
-            completed_boards.extend(to_completed);
-
-            // merge in hashm
-            for (k,v) in to_hash {
-                // k = target, v = sources?
-
-                if !board_graph_hashmap.contains_key(&k) {
-                    board_graph_hashmap.insert(k.clone(), board_graph.add_node(k.clone()));
-                }
-
-                let node = board_graph_hashmap[&k];
-
-                // now insert an edge from v to k
-                for p in &v {
-                    board_graph.add_edge(board_graph_hashmap[p], node);
-                }
-
-                let entry = hashm.entry(k).or_insert_with(Vec::new);
-                (*entry).extend(v);
-            }
-        }
-    }
-
-    for complete in completed_boards {
-        board_graph.complete_index = Some(board_graph_hashmap[&complete]);
-    }
-    board_graph
-}
+*/
 
 arg_enum!{
     #[derive(Debug, Copy, Clone)]
@@ -418,33 +391,40 @@ fn main() {
 
     let board = make_board(board_type, board_size, board_width,board_scale);
 
+
+    let mut tiler = Tiler::new(tiles, board);
+    dbg!(tiler.count_tilings());
+
+
+    /*
+
     if matches.is_present("scaling") {
         let mut board_scale : usize = 1;
 
         loop {
             let tiler = Tiler::new(tiles.clone(), make_board(board_type, board_size, board_width,board_scale));
-            println!("scale({}), {} tilings", board_scale, count_tilings(tiler));
+            //println!("scale({}), {} tilings", board_scale, count_tilings(tiler));
             board_scale += 1;
         }
     } else if matches.is_present("count") {
-        dbg!(count_tilings(Tiler::new(tiles, board)));
+        //dbg!(count_tilings(Tiler::new(tiles, board)));
     } else if matches.is_present("single") {
         let tiler = Tiler::new(tiles, board);
 
         // render a single tiling
-        let tiling = get_single_tiling(tiler);
+        // let tiling = get_single_tiling(tiler);
 
-        if let Some(tiling) = tiling {
-            println!("{}", render_single_tiling_from_vec(tiling));
-        } else {
-            println!("No tilings found!");
-        }
+        // if let Some(tiling) = tiling {
+             //println!("{}", render_single_tiling_from_vec(tiling));
+        // } else {
+        //   println!("No tilings found!");
+        // }
     } else if matches.is_present("graph") {
-        let tiler = Tiler::new(tiles, board);
+        //let tiler = Tiler::new(tiles, board);
 
         // compute the entire boardgraph for this tiler
-        let board_graph = compute_boardgraph(tiler);
+        //let board_graph = compute_boardgraph(tiler);
 
-        println!("{}", serde_json::to_string(&board_graph).unwrap());
-    }
+        //println!("{}", serde_json::to_string(&board_graph).unwrap());
+    }*/
 }
