@@ -417,10 +417,18 @@ fn main() {
             }
         };
 
+    for i in 1..=50 {
+        let board_width = 4 * i;
+        let board = make_board(board_type, board_size, board_width, board_scale);
+
+        println!("{},", Tiler::new(tiles.clone(), board).count_tilings().to_str_radix(10));
+    }
+    /*
     let board = make_board(board_type, board_size, board_width, board_scale);
 
     let mut tiler = Tiler::new(tiles, board);
-    dbg!(tiler.count_tilings().to_str_radix(10));
+    //dbg!(tiler.count_tilings().to_str_radix(10));
+    */
 
     /*
 
