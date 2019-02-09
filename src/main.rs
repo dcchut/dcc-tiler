@@ -1,38 +1,35 @@
 extern crate tilelib;
 
-use tilelib::tile::{TileCollection, Tile};
 use tilelib::board::RectangularBoard;
-//use tilelib::render::render_single_tiling_from_vec;
 use tilelib::graph::BoardGraph;
+use tilelib::tile::{Tile, TileCollection};
 
-use std::collections::{HashSet,HashMap};
-use std::sync::{Arc, RwLock};
+use clap::{App, Arg};
 use rayon::prelude::*;
-use clap::{Arg, App};
-//use rand::Rng;
+use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, RwLock};
 
 #[macro_use]
 extern crate clap;
 
-
 pub struct Tiler {
     tiles: TileCollection,
     initial_board: RectangularBoard,
-    graph : Option<Arc<RwLock<BoardGraph>>>,
+    graph: Option<Arc<RwLock<BoardGraph>>>,
 }
 
 impl Tiler {
-    pub fn new(tiles : TileCollection, initial_board : RectangularBoard) -> Self {
+    pub fn new(tiles: TileCollection, initial_board: RectangularBoard) -> Self {
         Tiler {
             tiles,
             initial_board,
-            graph : None,
+            graph: None,
         }
     }
 
     pub fn count_tilings(&mut self) -> u64 {
-        // if we have a boardgraph, use it
-        if !self.graph.is_none() {
+        // Use a boardgraph, if available.
+        if self.graph.is_some() {
             self.count_tilings_from_graph()
         } else {
             self.count_tilings_quick()
@@ -52,60 +49,64 @@ impl Tiler {
         let completed_board = Arc::new(RwLock::new(Vec::new()));
 
         while !stack.is_empty() {
-            let handles = stack.par_iter().map(|b| {
-                let current_count = counter.read().unwrap()[&b];
+            let handles = stack
+                .par_iter()
+                .map(|b| {
+                    let current_count = counter.read().unwrap()[&b];
 
-                let boards = b.place_tile(&self.tiles);
+                    let boards = b.place_tile(&self.tiles);
 
-                let mut next_boards = HashSet::new();
-                let mut completed_boards = HashSet::new();
-                let mut count_updates = HashMap::new();
+                    let mut next_boards = HashSet::new();
+                    let mut completed_boards = HashSet::new();
+                    let mut count_updates = HashMap::new();
 
-                for board in boards {
-                    *count_updates.entry(board.clone()).or_insert(0) += current_count;
+                    for board in boards {
+                        *count_updates.entry(board.clone()).or_insert(0) += current_count;
 
-                    if board.is_all_marked() {
-                        completed_boards.insert(board);
-                    } else {
-                        next_boards.insert(board);
+                        if board.is_all_marked() {
+                            completed_boards.insert(board);
+                        } else {
+                            next_boards.insert(board);
+                        }
                     }
-                }
 
-                (next_boards, completed_boards, count_updates)
-            }).collect::<Vec<_>>();
+                    (next_boards, completed_boards, count_updates)
+                })
+                .collect::<Vec<_>>();
 
             let step_stack = Arc::new(RwLock::new(HashSet::new()));
             counter = Arc::new(RwLock::new(HashMap::new()));
 
-            handles.into_par_iter().for_each(|(next_boards, completed_boards, count_updates)| {
-                // extend the new stack
-                {
-                    let mut stack_write = step_stack.write().unwrap();
-                    stack_write.extend(next_boards);
-                }
-
-                // update all of the tiling counts
-                {
-                    let mut counter_write = counter.write().unwrap();
-
-                    // update the counts
-                    for (board, count) in count_updates {
-                        let entry = counter_write.entry(board).or_insert(0);
-                        (*entry) += count;
-                    }
-                }
-
-
-                // mark the completed board
-                for board in completed_boards {
-                    // we obtain the lock on completed_board inside this for loop,
-                    // because having a completed board occurs so infrequently
+            handles
+                .into_par_iter()
+                .for_each(|(next_boards, completed_boards, count_updates)| {
+                    // extend the new stack
                     {
-                        let mut completed_board_write = completed_board.write().unwrap();
-                        completed_board_write.push(board);
+                        let mut stack_write = step_stack.write().unwrap();
+                        stack_write.extend(next_boards);
                     }
-                }
-            });
+
+                    // update all of the tiling counts
+                    {
+                        let mut counter_write = counter.write().unwrap();
+
+                        // update the counts
+                        for (board, count) in count_updates {
+                            let entry = counter_write.entry(board).or_insert(0);
+                            (*entry) += count;
+                        }
+                    }
+
+                    // mark the completed board
+                    for board in completed_boards {
+                        // we obtain the lock on completed_board inside this for loop,
+                        // because having a completed board occurs so infrequently
+                        {
+                            let mut completed_board_write = completed_board.write().unwrap();
+                            completed_board_write.push(board);
+                        }
+                    }
+                });
 
             // unwrap our stack
             stack = Arc::try_unwrap(step_stack).unwrap().into_inner().unwrap();
@@ -113,11 +114,11 @@ impl Tiler {
 
         let completed_board = completed_board.read().unwrap();
 
-        for board in completed_board.iter() {
-            return counter.read().unwrap()[board];
+        if let Some(board) = completed_board.last() {
+            counter.read().unwrap()[board]
+        } else {
+            0
         }
-
-        0
     }
 
     fn count_tilings_from_graph(&self) -> u64 {
@@ -151,7 +152,6 @@ impl Tiler {
                         (*entry) += c;
 
                         next_stack.insert(*edge);
-
                     }
                 }
             }
@@ -162,6 +162,7 @@ impl Tiler {
         *count_map.entry(complete_board_index.unwrap()).or_insert(0)
     }
 
+    #[allow(dead_code, clippy::map_entry)]
     fn generate_graph(&mut self) {
         let mut graph = BoardGraph::new();
         graph.add_node(self.initial_board.clone());
@@ -172,27 +173,35 @@ impl Tiler {
 
         while !stack.is_empty() {
             let mut next_iteration = Vec::new();
-            let mut board_map : HashMap<RectangularBoard, usize> = HashMap::new();
+            let mut board_map: HashMap<RectangularBoard, usize> = HashMap::new();
 
+            for (board_index, child_boards) in stack
+                .into_par_iter()
+                .map(|board_index| {
+                    let g = graph.read().unwrap();
 
-            for (board_index, child_boards) in stack.into_par_iter().map(|board_index| {
-                let g = graph.read().unwrap();
-
-                // get the current board
-                (board_index, if let Some(board) = g.get_node(board_index) {
-                    // now for each board, place a tile at some position,
-                    board.place_tile(&self.tiles)
-                } else {
-                    Vec::new()
+                    // get the current board
+                    (
+                        board_index,
+                        if let Some(board) = g.get_node(board_index) {
+                            // now for each board, place a tile at some position,
+                            board.place_tile(&self.tiles)
+                        } else {
+                            Vec::new()
+                        },
+                    )
                 })
-            }).collect::<Vec<_>>() {
+                .collect::<Vec<_>>()
+            {
                 // find / create the node id for this board
                 let mut g = graph.write().unwrap();
 
                 for board in child_boards {
                     let complete = board.is_all_marked();
 
-                    // add the board to our graph
+                    // We don't want to use an entry here because it would mean
+                    // having to clone our board every single time, even if the board
+                    // was already in our hashmap
                     let child_index = if board_map.contains_key(&board) {
                         board_map[&board]
                     } else {
@@ -278,7 +287,7 @@ pub fn get_single_tiling(tiler : Tiler) -> Option<Vec<RectangularBoard>> {
 
 */
 
-arg_enum!{
+arg_enum! {
     #[derive(Debug, Copy, Clone)]
     pub enum BoardType {
         Rectangle,
@@ -287,7 +296,7 @@ arg_enum!{
     }
 }
 
-arg_enum!{
+arg_enum! {
     #[derive(Debug, Copy, Clone)]
     pub enum TileType {
         LTile,
@@ -295,69 +304,88 @@ arg_enum!{
     }
 }
 
-
-
 fn main() {
     let matches = App::new("rs-tiler")
         .version("1.0")
         .author("Robert Usher")
         .about("Computes various tilings")
-        .arg(Arg::with_name("board_size")
-                 .help("The size of the board to tile")
-                 .index(1)
-                 .required(true))
-        .arg(Arg::with_name("width")
-                 .short("w")
-                 .long("width")
-                 .takes_value(true)
-                 .help("The (optional) width of the board"))
-        .arg(Arg::with_name("board_type")
-                 .help("The type of board to use")
-                 .possible_values(&BoardType::variants())
-                 .default_value("LBoard")
-                 .index(3))
-        .arg(Arg::with_name("board_scale")
-                 .help("The board scale to use, if using an LBoard")
-                 .long("scale")
-                 .default_value("1"))
-        .arg(Arg::with_name("tile_type")
-                 .help("The type of tile to use")
-                 .possible_values(&TileType::variants())
-                 .default_value("LTile")
-                 .index(4))
-        .arg(Arg::with_name("tile_size")
-                 .help("The size of the tile")
-                 .index(2)
-                 .required(true))
-        .arg(Arg::with_name("single")
-                 .short("s")
-                 .long("single")
-                 .help("Computes a single tiling")
-                 .conflicts_with("count")
-                 .conflicts_with("graph"))
-        .arg(Arg::with_name("count")
-                 .short("c")
-                 .long("count")
-                 .help("Counts all tilings")
-                 .conflicts_with("single")
-                 .conflicts_with("graph"))
-        .arg(Arg::with_name("graph")
-                 .short("g")
-                 .long("graph")
-                 .help("Computes the full tilings graph")
-                 .conflicts_with("count")
-                 .conflicts_with("single"))
-        .arg(Arg::with_name("scaling")
-                 .long("scaling")
-                 .help("Computes the tiling count for different values of the scale parameter")
-                 .conflicts_with("graph")
-                 .conflicts_with("count")
-                 .conflicts_with("single"))
+        .arg(
+            Arg::with_name("board_size")
+                .help("The size of the board to tile")
+                .index(1)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("width")
+                .short("w")
+                .long("width")
+                .takes_value(true)
+                .help("The (optional) width of the board"),
+        )
+        .arg(
+            Arg::with_name("board_type")
+                .help("The type of board to use")
+                .possible_values(&BoardType::variants())
+                .default_value("LBoard")
+                .index(3),
+        )
+        .arg(
+            Arg::with_name("board_scale")
+                .help("The board scale to use, if using an LBoard")
+                .long("scale")
+                .default_value("1"),
+        )
+        .arg(
+            Arg::with_name("tile_type")
+                .help("The type of tile to use")
+                .possible_values(&TileType::variants())
+                .default_value("LTile")
+                .index(4),
+        )
+        .arg(
+            Arg::with_name("tile_size")
+                .help("The size of the tile")
+                .index(2)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("single")
+                .short("s")
+                .long("single")
+                .help("Computes a single tiling")
+                .conflicts_with("count")
+                .conflicts_with("graph"),
+        )
+        .arg(
+            Arg::with_name("count")
+                .short("c")
+                .long("count")
+                .help("Counts all tilings")
+                .conflicts_with("single")
+                .conflicts_with("graph"),
+        )
+        .arg(
+            Arg::with_name("graph")
+                .short("g")
+                .long("graph")
+                .help("Computes the full tilings graph")
+                .conflicts_with("count")
+                .conflicts_with("single"),
+        )
+        .arg(
+            Arg::with_name("scaling")
+                .long("scaling")
+                .help("Computes the tiling count for different values of the scale parameter")
+                .conflicts_with("graph")
+                .conflicts_with("count")
+                .conflicts_with("single"),
+        )
         .get_matches();
 
-    let board_type = value_t!(matches.value_of("board_type"), BoardType).unwrap_or_else(|e| e.exit());
+    let board_type =
+        value_t!(matches.value_of("board_type"), BoardType).unwrap_or_else(|e| e.exit());
     let tile_type = value_t!(matches.value_of("tile_type"), TileType).unwrap_or_else(|e| e.exit());
-    let board_size = value_t!(matches.value_of("board_size"),usize).unwrap_or_else(|e| e.exit());
+    let board_size = value_t!(matches.value_of("board_size"), usize).unwrap_or_else(|e| e.exit());
 
     let board_width = if matches.is_present("width") {
         value_t!(matches.value_of("width"), usize).unwrap_or_else(|e| e.exit())
@@ -368,33 +396,28 @@ fn main() {
     let tile_size = value_t!(matches.value_of("tile_size"), usize).unwrap_or_else(|e| e.exit());
     let board_scale = value_t!(matches.value_of("board_scale"), usize).unwrap_or_else(|e| e.exit());
 
-    // Create the tile & tilecollection specified by the user
+    // Create a colletion of tiles based on the tile(s) specified by the user
     let tile = match tile_type {
-        TileType::LTile => {
-            Tile::l_tile(tile_size)
-        },
-        TileType::TTile => {
-            Tile::t_tile(tile_size)
-        },
+        TileType::LTile => Tile::l_tile(tile_size),
+        TileType::TTile => Tile::t_tile(tile_size),
     };
 
     let tiles = TileCollection::from(tile);
 
     // A closure to create a board based on specified options
-    let make_board = |board_type : BoardType, board_size : usize, board_width : usize, board_scale : usize| {
-        match board_type {
-            BoardType::Rectangle => RectangularBoard::new(board_width, board_size),
-            BoardType::LBoard => RectangularBoard::l_board(board_size, board_scale),
-            BoardType::TBoard => RectangularBoard::t_board(board_size, board_scale),
-        }
-    };
+    let make_board =
+        |board_type: BoardType, board_size: usize, board_width: usize, board_scale: usize| {
+            match board_type {
+                BoardType::Rectangle => RectangularBoard::new(board_width, board_size),
+                BoardType::LBoard => RectangularBoard::l_board(board_size, board_scale),
+                BoardType::TBoard => RectangularBoard::t_board(board_size, board_scale),
+            }
+        };
 
-    let board = make_board(board_type, board_size, board_width,board_scale);
-
+    let board = make_board(board_type, board_size, board_width, board_scale);
 
     let mut tiler = Tiler::new(tiles, board);
     dbg!(tiler.count_tilings());
-
 
     /*
 

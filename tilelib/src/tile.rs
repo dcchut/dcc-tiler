@@ -12,7 +12,6 @@ pub enum Direction {
     DownLeft,
 }
 
-
 #[derive(Debug, Copy, Clone)]
 pub enum Axis {
     Vertical,
@@ -27,7 +26,7 @@ impl Direction {
     /// ```
     /// // Example code here
     /// ```
-    pub fn opposite(&self) -> Self {
+    pub fn opposite(self) -> Self {
         match self {
             Direction::Up => Direction::Down,
             Direction::Right => Direction::Left,
@@ -40,7 +39,7 @@ impl Direction {
         }
     }
 
-    pub fn rotate(&self) -> Self {
+    pub fn rotate(self) -> Self {
         match self {
             Direction::Up => Direction::Right,
             Direction::Right => Direction::Down,
@@ -53,46 +52,38 @@ impl Direction {
         }
     }
 
-    pub fn reflect(&self, axis : Axis) -> Self {
+    pub fn reflect(self, axis: Axis) -> Self {
         match axis {
-            Axis::Horizontal => {
-                match self {
-                    Direction::Up => Direction::Down,
-                    Direction::Down => Direction::Up,
-                    Direction::UpLeft => Direction::DownLeft,
-                    Direction::UpRight => Direction::DownRight,
-                    Direction::DownLeft => Direction::UpLeft,
-                    Direction::DownRight => Direction::UpRight,
-                    x => x.clone(),
-                }
+            Axis::Horizontal => match self {
+                Direction::Up => Direction::Down,
+                Direction::Down => Direction::Up,
+                Direction::UpLeft => Direction::DownLeft,
+                Direction::UpRight => Direction::DownRight,
+                Direction::DownLeft => Direction::UpLeft,
+                Direction::DownRight => Direction::UpRight,
+                x => x,
             },
-            Axis::Vertical => {
-                match self {
-                    Direction::Left => Direction::Right,
-                    Direction::Right => Direction::Left,
-                    Direction::UpLeft => Direction::UpRight,
-                    Direction::UpRight => Direction::UpLeft,
-                    Direction::DownLeft => Direction::DownRight,
-                    Direction::DownRight => Direction::DownLeft,
-                    x => x.clone(),
-                }
-            }
+            Axis::Vertical => match self {
+                Direction::Left => Direction::Right,
+                Direction::Right => Direction::Left,
+                Direction::UpLeft => Direction::UpRight,
+                Direction::UpRight => Direction::UpLeft,
+                Direction::DownLeft => Direction::DownRight,
+                Direction::DownRight => Direction::DownLeft,
+                x => x,
+            },
         }
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Tile {
-    pub directions : Vec<Direction>,
+    pub directions: Vec<Direction>,
 }
 
-
 impl Tile {
-    pub fn new(directions : Vec<Direction>) -> Self {
-        Tile {
-            directions
-        }
+    pub fn new(directions: Vec<Direction>) -> Self {
+        Tile { directions }
     }
 
     /// Returns an L-shaped tile consisting of n + 1 blocks
@@ -107,19 +98,19 @@ impl Tile {
     /// let tile = Tile::l_tile(2);
     /// assert_eq!(tile, vec![Direction::Left, Direction::Up, Direction::Up]);
     /// ```
-    pub fn l_tile(length : usize) -> Self {
+    pub fn l_tile(length: usize) -> Self {
         assert!(length > 0);
 
         let mut directions = vec![Direction::Left];
 
-        for _ in 0..(length-1) {
+        for _ in 0..(length - 1) {
             directions.push(Direction::Up);
         }
 
         Tile::new(directions)
     }
 
-    pub fn t_tile(length : usize) -> Self {
+    pub fn t_tile(length: usize) -> Self {
         assert!(length > 0);
 
         let mut directions = Vec::new();
@@ -159,22 +150,31 @@ impl Tile {
     /// let reflected_tile = tile.reflect(Axis::Vertical);
     /// assert_eq!(reflected_tile, Tile::new(vec![Direction::Left, Direction::Down, Direction::Right]));
     /// ```
-    fn reflect(&self, axis : Axis) -> Tile {
+    fn reflect(&self, axis: Axis) -> Tile {
         Tile::new(self.directions.iter().map(|d| d.reflect(axis)).collect())
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct TileCollection {
-    pub tiles : Vec<Tile>,
+    tiles: Vec<Tile>,
+    contains_single_tile: bool,
 }
 
 impl TileCollection {
-    pub fn new(tiles : Vec<Tile>) -> Self {
+    pub fn new(tiles: Vec<Tile>) -> Self {
         TileCollection {
+            contains_single_tile: tiles.iter().any(|b| b.directions.is_empty()),
             tiles,
         }
+    }
+
+    pub fn contains_single_tile(&self) -> bool {
+        self.contains_single_tile
+    }
+
+    pub fn iter<'b>(&'b self) -> Box<Iterator<Item = &Tile> + 'b> {
+        Box::new(self.tiles.iter())
     }
 }
 
@@ -187,12 +187,11 @@ impl From<Tile> for TileCollection {
         /// let tile = Tile::l_tile(3);
         /// assert_eq!(tile.symmetry_orbit().len(), 4);
         /// ```
-        fn symmetry_orbit(tile : Tile) -> TileCollection {
+        fn symmetry_orbit(tile: Tile) -> TileCollection {
             let mut orbit = HashSet::new();
 
             // our starting set of directions
             orbit.insert(tile);
-
 
             loop {
                 // in each iteration, we check whether our directions set
@@ -219,46 +218,5 @@ impl From<Tile> for TileCollection {
             TileCollection::new(orbit.into_iter().collect())
         }
         symmetry_orbit(tile)
-    }
-}
-
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Position {
-    pub x: i32,
-    pub y: i32,
-}
-
-impl Position {
-    pub fn new(x: i32, y: i32) -> Self {
-        Position {
-            x,
-            y,
-        }
-    }
-}
-
-#[derive(Debug, Eq, Clone)]
-pub struct TilePosition {
-    position : Position,
-    tile : Tile,
-    start_index : usize,
-    pub covered : HashSet<Position>
-}
-
-impl TilePosition {
-    pub fn new(position : Position, tile : Tile, start_index : usize, covered : HashSet<Position>) -> Self {
-        TilePosition {
-            covered,
-            position,
-            tile,
-            start_index,
-        }
-    }
-}
-
-impl PartialEq for TilePosition {
-    fn eq(&self, other: &TilePosition) -> bool {
-        self.covered == other.covered
     }
 }

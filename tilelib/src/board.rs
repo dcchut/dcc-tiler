@@ -1,58 +1,50 @@
-use crate::tile::{Tile, TilePosition, Position, Direction, TileCollection};
-use std::collections::{HashSet, HashMap};
+use crate::tile::{Direction, Tile, TileCollection};
 use serde_derive::Serialize;
+use std::collections::HashSet;
+use std::fmt;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
+#[derive(Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct RectangularBoard {
     #[serde(skip_serializing)]
-    pub width : usize,
+    pub width: usize,
 
     #[serde(skip_serializing)]
-    pub height : usize,
+    pub height: usize,
 
-    pub board : Vec<Vec<bool>>,
+    pub board: Vec<Vec<bool>>,
 
     #[serde(skip_serializing)]
-    counts : Vec<Vec<usize>>,
+    counts: Vec<Vec<usize>>,
 }
 
-
 impl RectangularBoard {
-    pub fn new(width : usize, height : usize) -> Self {
-        let mut counts = vec![vec![0 ; width] ; height ];
+    pub fn new(width: usize, height: usize) -> Self {
+        let mut counts = vec![vec![0; width]; height];
 
-        for i in 0..height {
-            counts[i][0] = 1;
-            counts[i][width - 1] = 1;
+        for row in counts.iter_mut() {
+            row[0] = 1;
+            row[width - 1] = 1;
         }
+
         for j in 0..width {
             counts[0][j] = 1;
             counts[height - 1][j] = 1;
         }
 
-
         RectangularBoard {
             width,
             height,
-            board : vec![vec![false ; width] ; height],
-            counts : counts,
+            board: vec![vec![false; width]; height],
+            counts,
         }
     }
 
-    pub fn disp(&self) -> String {
-        let mut o = String::new();
-
-        for row in &self.board {
-            for col in row {
-                o.push(if *col { ' ' } else { 'x' });
-            }
-            o.push('\n');
-        }
-
-        o
-    }
-
-    pub fn l_board(n : usize, scale : usize) -> Self {
+    /// Generates a new L-tetromino shaped board.
+    ///
+    /// This is a two step process - first we make an L shape
+    /// with long side having length n, and then we replace each
+    /// box with a scale^2 box.
+    pub fn l_board(n: usize, scale: usize) -> Self {
         let mut board = RectangularBoard::new(n * scale, 2 * scale);
 
         for row in 0..scale {
@@ -64,7 +56,12 @@ impl RectangularBoard {
         board
     }
 
-    pub fn t_board(n : usize, scale: usize) -> Self {
+    /// Generates a new T-tetromino shaped board.
+    ///
+    /// This is a two step process - first we make a T shape
+    /// where the two tils have length n, and then we replace
+    /// each box with a scale^2 box.
+    pub fn t_board(n: usize, scale: usize) -> Self {
         let mut board = RectangularBoard::new((2 * n + 1) * scale, 2 * scale);
 
         for row in 0..scale {
@@ -79,25 +76,36 @@ impl RectangularBoard {
         board
     }
 
-
-    fn mark(&mut self, p: &Position) {
-        for xp in (p.x-1)..=(p.x+1) {
+    /// What does it do?
+    ///
+    /// Details here.
+    ///
+    /// # Panics
+    ///
+    /// When does it panic?
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Example code here
+    /// ```
+    fn mark(&mut self, p: Position) {
+        for xp in (p.x - 1)..=(p.x + 1) {
             if xp == p.x {
                 continue;
             }
-            if self.is_valid(&Position::new(xp,p.y)) {
+            if self.is_valid(Position::from((xp, p.y))) {
                 self.counts[xp as usize][p.y as usize] += 1;
             }
         }
-        for yp in (p.y-1)..=(p.y+1) {
+        for yp in (p.y - 1)..=(p.y + 1) {
             if yp == p.y {
                 continue;
             }
-            if self.is_valid(&Position::new(p.x, yp)) {
+            if self.is_valid(Position::from((p.x, yp))) {
                 self.counts[p.x as usize][yp as usize] += 1;
             }
         }
-
 
         self.board[p.x as usize][p.y as usize] = true;
     }
@@ -112,7 +120,7 @@ impl RectangularBoard {
     pub fn is_all_marked(&self) -> bool {
         for row in self.board.iter() {
             for col in row.iter() {
-                if *col == false {
+                if !(*col) {
                     return false;
                 }
             }
@@ -120,8 +128,7 @@ impl RectangularBoard {
         true
     }
 
-
-    pub fn place_tile(&self, tile_collection : &TileCollection) -> Vec<RectangularBoard> {
+    pub fn place_tile(&self, tile_collection: &TileCollection) -> Vec<RectangularBoard> {
         let mut largest_count = None;
         let mut largest_position = None;
 
@@ -130,30 +137,33 @@ impl RectangularBoard {
             for i in 0..self.height {
                 if !self.board[i][j] {
                     let count = self.counts[i][j];
-                    // TODO : maybe deal with stupid case where we're allowed a 1x1 piece
-                    // this spot cannot be tiled
-                    if count == 4 {
+
+                    // If our tile collection doesn't contain a 1x1 tile,
+                    // then we've found a spot that cannot be tiled, so we're done
+                    if !tile_collection.contains_single_tile() && count == 4 {
                         return Vec::new();
                     }
 
+                    // keep track of the largest count we've found so far
                     if largest_count.is_none() || self.counts[i][j] > largest_count.unwrap() {
                         largest_count = Some(self.counts[i][j]);
-                        largest_position = Some((i,j));
+                        largest_position = Some((i, j));
                     }
                 }
             }
         }
 
-
+        // Next, find all the tiles that fit at out best position
         let mut fitting_tiles = Vec::new();
 
-        if let Some((i,j)) = largest_position {
-            for tile in tile_collection.tiles.iter() {
+        if let Some((i, j)) = largest_position {
+            for tile in tile_collection.iter() {
                 for start_index in 0..=tile.directions.len() {
-                    if let Some(tp) = self.tile_fits_at_position(tile, Position::new(i as i32, j as i32), start_index) {
-                        // we really should be using a HashSet for fitting_tiles, but
-                        // I haven't figured out how to put a TilePosition in a HashSet,
-                        // so we just check for containment here instead
+                    if let Some(tp) =
+                        self.tile_fits_at_position(tile, Position::from((i, j)), start_index)
+                    {
+                        // Really we should be using a HashSet for fitting_tiles, but it's annoying
+                        // to hash a HashSet, so we just check for containment here instead
                         if !fitting_tiles.contains(&tp) {
                             fitting_tiles.push(tp);
                         }
@@ -162,86 +172,28 @@ impl RectangularBoard {
             }
         }
 
-        fitting_tiles.into_iter().map(|tp| {
-            let mut child_board = self.clone();
-            child_board.mark_tile_at_position(tp);
-            child_board
-        }).collect()
+        // For each fitting tile we find, return the corresponding board
+        fitting_tiles
+            .into_iter()
+            .map(|tp| {
+                let mut child_board = self.clone();
+                child_board.mark_tile_at_position(tp);
+                child_board
+            })
+            .collect()
     }
 
-    // TODO: document
-    pub fn get_unmarked_position(&self, tiles : &Vec<Tile>) -> Option<Position> {
-        // TODO: refactor counts into a new matrix maybe, to avoid recalculating each time?
-        let mut counts = HashMap::new();
-
-        for (i, row) in self.board.iter().enumerate() {
-            for (j, col) in row.iter().enumerate() {
-                if *col {
-                    // increment adjacent positions by 1
-                    for p in vec![Position::new(i as i32 - 1, j as i32),
-                                  Position::new(i as i32, j as i32 + 1),
-                                  Position::new(i as i32, j as i32 - 1),
-                                  Position::new(i as i32 + 1, j as i32)] {
-                        if self.is_valid(&p) {
-                            (*counts.entry(p).or_insert(0)) += 1;
-                        }
-                    }
-                }
-            }
-        }
-
-        let mut max_count = -1;
-        let mut max_position = None;
-
-        for j in 0..self.width {
-            for i in 0..self.height {
-                if self.board[i][j] == false {
-                    let mut found_tile = false;
-
-                    'outer: for tile in tiles {
-                        for start_index in 0..=tile.directions.len() {
-                            if let Some(_) = self.tile_fits_at_position(tile, Position::new(i as i32, j as i32), start_index) {
-                                // found a fitting tile!
-                                found_tile = true;
-                                break 'outer;
-                            }
-                        }
-                    }
-
-                    // no tile found that could actually tile here!
-                    if !found_tile {
-                        return None;
-                    }
-
-                    let p = Position::new(i as i32, j as i32);
-                    let count = *counts.entry(p.clone()).or_default();
-
-                    if count == 3 {
-                        return Some(p);
-                    } else if count > max_count {
-                        max_count = count;
-                        max_position = Some(p);
-                    }
-                }
-            }
-        }
-
-        max_position
-    }
-
-
-    fn is_marked(&self, p : &Position) -> bool {
+    fn is_marked(&self, p: Position) -> bool {
         assert!(self.is_valid(p));
 
         self.board[p.x as usize][p.y as usize]
     }
 
-    fn is_valid(&self, p : &Position) -> bool {
+    fn is_valid(&self, p: Position) -> bool {
         p.x >= 0 && (p.x as usize) < self.height && p.y >= 0 && (p.y as usize) < self.width
     }
 
-
-    fn move_in_direction(&self, p : &Position, direction : &Direction) -> Position {
+    fn move_in_direction(&self, p: Position, direction: Direction) -> Position {
         let mut row = p.x;
         let mut col = p.y;
 
@@ -275,17 +227,20 @@ impl RectangularBoard {
     /// ```
     /// // Example code here
     /// ```
-    pub fn tile_fits_at_position(&self, tile : &Tile, position : Position, start_index : usize) -> Option<TilePosition> {
+    fn tile_fits_at_position(
+        &self,
+        tile: &Tile,
+        position: Position,
+        start_index: usize,
+    ) -> Option<TilePosition> {
         // make sure our start index isn't too large
         assert!(start_index <= tile.directions.len());
 
         let mut current_position = position;
 
-        let valid_and_unmarked = |p : &Position| {
-            self.is_valid(p) && !self.is_marked(p)
-        };
+        let valid_and_unmarked = |p: Position| self.is_valid(p) && !self.is_marked(p);
 
-        if !valid_and_unmarked(&current_position) {
+        if !valid_and_unmarked(current_position) {
             return None;
         }
 
@@ -294,9 +249,10 @@ impl RectangularBoard {
 
         // move backwards from start_index - 1
         for i in (0..start_index).rev() {
-            current_position = self.move_in_direction(&current_position, &tile.directions[i].opposite());
+            current_position =
+                self.move_in_direction(current_position, tile.directions[i].opposite());
 
-            if !valid_and_unmarked(&current_position) {
+            if !valid_and_unmarked(current_position) {
                 return None;
             }
             covered.insert(current_position);
@@ -306,21 +262,95 @@ impl RectangularBoard {
 
         // now move forwards after the start index
         for i in start_index..tile.directions.len() {
-            current_position = self.move_in_direction(&current_position, &tile.directions[i]);
+            current_position = self.move_in_direction(current_position, tile.directions[i]);
 
-            if !valid_and_unmarked(&current_position) {
+            if !valid_and_unmarked(current_position) {
                 return None;
             }
 
             covered.insert(current_position);
         }
 
-        Some(TilePosition::new(position, tile.clone(), start_index, covered))
+        Some(TilePosition::new(
+            position,
+            tile.clone(),
+            start_index,
+            covered,
+        ))
     }
 
-    pub fn mark_tile_at_position(&mut self, tp : TilePosition) {
+    fn mark_tile_at_position(&mut self, tp: TilePosition) {
         for position in tp.covered {
-            self.mark(&position);
+            self.mark(position);
         }
+    }
+}
+
+impl fmt::Debug for RectangularBoard {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut os = Vec::with_capacity((1 + self.width) * self.height);
+
+        for i in 0..self.height {
+            for j in 0..self.width {
+                os.push(if self.board[i][j] { "x" } else { "*" });
+            }
+            os.push("\n");
+        }
+
+        write!(f, "{}", os.join(""))
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+struct Position {
+    x: isize,
+    y: isize,
+}
+
+impl From<(isize, isize)> for Position {
+    fn from(p: (isize, isize)) -> Self {
+        Position::new(p.0, p.1)
+    }
+}
+
+impl From<(usize, usize)> for Position {
+    fn from(p: (usize, usize)) -> Self {
+        Position::new(p.0 as isize, p.1 as isize)
+    }
+}
+
+impl Position {
+    pub fn new(x: isize, y: isize) -> Self {
+        Position { x, y }
+    }
+}
+
+#[derive(Eq, Clone)]
+struct TilePosition {
+    position: Position,
+    tile: Tile,
+    start_index: usize,
+    covered: HashSet<Position>,
+}
+
+impl TilePosition {
+    pub fn new(
+        position: Position,
+        tile: Tile,
+        start_index: usize,
+        covered: HashSet<Position>,
+    ) -> Self {
+        TilePosition {
+            covered,
+            position,
+            tile,
+            start_index,
+        }
+    }
+}
+
+impl PartialEq for TilePosition {
+    fn eq(&self, other: &TilePosition) -> bool {
+        self.covered == other.covered
     }
 }
