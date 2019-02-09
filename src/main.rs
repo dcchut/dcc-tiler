@@ -3,6 +3,7 @@ extern crate tilelib;
 use tilelib::board::RectangularBoard;
 use tilelib::graph::BoardGraph;
 use tilelib::tile::{Tile, TileCollection};
+use num::{BigUint, One, Zero};
 
 use clap::{App, Arg};
 use rayon::prelude::*;
@@ -27,19 +28,21 @@ impl Tiler {
         }
     }
 
-    pub fn count_tilings(&mut self) -> u64 {
+    pub fn count_tilings(&mut self) -> BigUint {
+        return self.count_tilings_quick();
+        /*
         // Use a boardgraph, if available.
         if self.graph.is_some() {
             self.count_tilings_from_graph()
         } else {
             self.count_tilings_quick()
-        }
+        }*/
     }
 
-    fn count_tilings_quick(&self) -> u64 {
+    fn count_tilings_quick(&self) -> BigUint {
         // we keep the counter behind an Arc<RwLock<>>
         let mut counter = HashMap::new();
-        counter.insert(self.initial_board.clone(), 1);
+        counter.insert(self.initial_board.clone(), num::BigUint::one());
         let mut counter = Arc::new(RwLock::new(counter));
 
         // our working stack
@@ -52,7 +55,7 @@ impl Tiler {
             let handles = stack
                 .par_iter()
                 .map(|b| {
-                    let current_count = counter.read().unwrap()[&b];
+                    let current_count = &counter.read().unwrap()[&b];
 
                     let boards = b.place_tile(&self.tiles);
 
@@ -61,7 +64,7 @@ impl Tiler {
                     let mut count_updates = HashMap::new();
 
                     for board in boards {
-                        *count_updates.entry(board.clone()).or_insert(0) += current_count;
+                        *count_updates.entry(board.clone()).or_insert(num::BigUint::zero()) += current_count;
 
                         if board.is_all_marked() {
                             completed_boards.insert(board);
@@ -92,7 +95,7 @@ impl Tiler {
 
                         // update the counts
                         for (board, count) in count_updates {
-                            let entry = counter_write.entry(board).or_insert(0);
+                            let entry = counter_write.entry(board).or_insert(num::BigUint::zero());
                             (*entry) += count;
                         }
                     }
@@ -115,9 +118,9 @@ impl Tiler {
         let completed_board = completed_board.read().unwrap();
 
         if let Some(board) = completed_board.last() {
-            counter.read().unwrap()[board]
+            counter.read().unwrap()[board].clone()
         } else {
-            0
+            num::BigUint::zero()
         }
     }
 
@@ -417,7 +420,7 @@ fn main() {
     let board = make_board(board_type, board_size, board_width, board_scale);
 
     let mut tiler = Tiler::new(tiles, board);
-    dbg!(tiler.count_tilings());
+    dbg!(tiler.count_tilings().to_str_radix(10));
 
     /*
 
