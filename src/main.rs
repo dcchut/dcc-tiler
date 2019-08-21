@@ -1,14 +1,16 @@
 extern crate tilelib;
 
+use num::{BigUint, One, Zero};
 use tilelib::board::RectangularBoard;
 use tilelib::graph::BoardGraph;
 use tilelib::tile::{Tile, TileCollection};
-use num::{BigUint, One, Zero};
 
 use clap::{App, Arg};
+use rand::Rng;
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
+use tilelib::render::render_single_tiling_from_vec;
 
 #[macro_use]
 extern crate clap;
@@ -29,14 +31,12 @@ impl Tiler {
     }
 
     pub fn count_tilings(&mut self) -> BigUint {
-        return self.count_tilings_quick();
-        /*
         // Use a boardgraph, if available.
         if self.graph.is_some() {
             self.count_tilings_from_graph()
         } else {
             self.count_tilings_quick()
-        }*/
+        }
     }
 
     fn count_tilings_quick(&self) -> BigUint {
@@ -64,7 +64,9 @@ impl Tiler {
                     let mut count_updates = HashMap::new();
 
                     for board in boards {
-                        *count_updates.entry(board.clone()).or_insert(num::BigUint::zero()) += current_count;
+                        *count_updates
+                            .entry(board.clone())
+                            .or_insert(num::BigUint::zero()) += current_count;
 
                         if board.is_all_marked() {
                             completed_boards.insert(board);
@@ -124,7 +126,7 @@ impl Tiler {
         }
     }
 
-    fn count_tilings_from_graph(&self) -> u64 {
+    fn count_tilings_from_graph(&self) -> BigUint {
         let graph = Arc::clone(self.graph.as_ref().unwrap());
         let g = graph.read().unwrap();
 
@@ -133,11 +135,11 @@ impl Tiler {
         let complete_board_index = g.get_complete_index();
 
         if complete_board_index.is_none() {
-            return 0;
+            return BigUint::zero();
         }
 
         let mut count_map = HashMap::new();
-        count_map.insert(0, 1);
+        count_map.insert(0, BigUint::one());
 
         // now work through the stack
         let mut stack = HashSet::new();
@@ -147,12 +149,12 @@ impl Tiler {
             let mut next_stack = HashSet::new();
 
             for board_index in stack {
-                let c = count_map[&board_index];
+                let c = count_map[&board_index].clone();
 
                 if let Some(edges) = g.get_edges(board_index) {
                     for edge in edges {
-                        let entry = count_map.entry(*edge).or_insert(0);
-                        (*entry) += c;
+                        let entry = count_map.entry(*edge).or_insert(BigUint::zero());
+                        (*entry) += c.clone();
 
                         next_stack.insert(*edge);
                     }
@@ -162,7 +164,11 @@ impl Tiler {
             stack = next_stack;
         }
 
-        *count_map.entry(complete_board_index.unwrap()).or_insert(0)
+        if let Some(res) = count_map.remove(&complete_board_index.unwrap()) {
+            res
+        } else {
+            BigUint::zero()
+        }
     }
 
     #[allow(dead_code, clippy::map_entry)]
@@ -228,41 +234,30 @@ impl Tiler {
         }
         self.graph = Some(graph);
     }
-}
 
-/*
-TODO - implement get_single_tiling
+    pub fn graph(&mut self) -> Arc<RwLock<BoardGraph>> {
+        // If the graph doesn't exist already, generate it
+        if self.graph.is_none() {
+            self.generate_graph();
+        }
 
-pub fn get_single_tiling(tiler : Tiler) -> Option<Vec<RectangularBoard>> {
-    let mut stack = Vec::new();
-    stack.push(vec![tiler.board.clone()]);
+        // Now return a reference to the graph
+        Arc::clone(self.graph.as_ref().unwrap())
+    }
 
-    let mut completed_tilings = Vec::new();
+    pub fn get_single_tiling(&mut self, limit : usize) -> Option<Vec<RectangularBoard>> {
+        let mut stack = vec![vec![self.initial_board.clone()]];
+        let mut completed_tilings = Vec::new();
 
-    while let Some(tvec) = stack.pop() {
-        let current_board = tvec.last().unwrap();
+        while let Some(tvec) = stack.pop() {
+            let current_board = tvec.last().unwrap();
+            let fitting_tiles = current_board.place_tile(&self.tiles);
 
-        if let Some(p) = current_board.get_unmarked_position(&tiler.tiles.tiles) {
-            let mut fitting_tiles = Vec::new();
-
-            for tile in tiler.tiles.tiles.iter() {
-                for start_index in 0..=tile.directions.len() {
-                    if let Some(tile_position) = current_board.tile_fits_at_position(tile, p, start_index) {
-                        if !fitting_tiles.contains(&tile_position) {
-                            fitting_tiles.push(tile_position);
-                        }
-                    }
-                }
-            }
-
-            for tp in fitting_tiles {
-                let mut marked_board = current_board.clone();
-                marked_board.mark_tile_at_position(tp);
-
-                let is_all_marked = marked_board.is_all_marked();
+            for board in fitting_tiles {
+                let is_all_marked = board.is_all_marked();
 
                 let mut new_tvec = tvec.clone();
-                new_tvec.push(marked_board);
+                new_tvec.push(board);
 
                 if is_all_marked {
                     completed_tilings.push(new_tvec);
@@ -271,24 +266,20 @@ pub fn get_single_tiling(tiler : Tiler) -> Option<Vec<RectangularBoard>> {
                 }
             }
 
-            // Stop looking for tilings if we've already found 1000.
-            // TODO: maybe make this number configurable
-            if completed_tilings.len() >= 1000 {
+            if completed_tilings.len() >= limit {
                 break;
             }
         }
-    }
 
-    if !completed_tilings.is_empty() {
-        // Select a random solution from those already found
-        let solution_index = rand::thread_rng().gen_range(0, completed_tilings.len());
-        return Some(completed_tilings[solution_index].clone());
-    }
+        if !completed_tilings.is_empty() {
+            // Select a random solution from those already found
+            let solution_index = rand::thread_rng().gen_range(0, completed_tilings.len());
+            return Some(completed_tilings[solution_index].clone());
+        }
 
-    None
+        None
+    }
 }
-
-*/
 
 arg_enum! {
     #[derive(Debug, Copy, Clone)]
@@ -417,48 +408,41 @@ fn main() {
             }
         };
 
-    for i in 1..=50 {
-        let board_width = 4 * i;
-        let board = make_board(board_type, board_size, board_width, board_scale);
-
-        println!("{},", Tiler::new(tiles.clone(), board).count_tilings().to_str_radix(10));
-    }
-    /*
-    let board = make_board(board_type, board_size, board_width, board_scale);
-
-    let mut tiler = Tiler::new(tiles, board);
-    //dbg!(tiler.count_tilings().to_str_radix(10));
-    */
-
-    /*
-
     if matches.is_present("scaling") {
-        let mut board_scale : usize = 1;
+        // we deal with scaling separately to appease the borrow checker
+        let mut board_scale: usize = 1;
 
         loop {
-            let tiler = Tiler::new(tiles.clone(), make_board(board_type, board_size, board_width,board_scale));
-            //println!("scale({}), {} tilings", board_scale, count_tilings(tiler));
+            let mut tiler = Tiler::new(
+                tiles.clone(),
+                make_board(board_type, board_size, board_width, board_scale),
+            );
+            println!("scale({}), {} tilings", board_scale, tiler.count_tilings());
             board_scale += 1;
         }
-    } else if matches.is_present("count") {
-        //dbg!(count_tilings(Tiler::new(tiles, board)));
-    } else if matches.is_present("single") {
-        let tiler = Tiler::new(tiles, board);
+    } else {
+        let board = make_board(board_type, board_size, board_width, board_scale);
+        let mut tiler = Tiler::new(tiles, board);
 
-        // render a single tiling
-        // let tiling = get_single_tiling(tiler);
+        if matches.is_present("count") {
+            // just do a quick tilings count
+            dbg!(tiler.count_tilings());
+        } else if matches.is_present("single") {
+            let tiling = tiler.get_single_tiling(1000);
 
-        // if let Some(tiling) = tiling {
-             //println!("{}", render_single_tiling_from_vec(tiling));
-        // } else {
-        //   println!("No tilings found!");
-        // }
-    } else if matches.is_present("graph") {
-        //let tiler = Tiler::new(tiles, board);
+            if let Some(tiling) = tiling {
+                println!("{}", render_single_tiling_from_vec(tiling));
+            } else {
+                println!("No tilings found!");
+            }
+        } else if matches.is_present("graph") {
+            let board_graph = tiler.graph();
 
-        // compute the entire boardgraph for this tiler
-        //let board_graph = compute_boardgraph(tiler);
+            {
+                let board_graph = board_graph.read().unwrap();
 
-        //println!("{}", serde_json::to_string(&board_graph).unwrap());
-    }*/
+                println!("{}", serde_json::to_string(&*board_graph).unwrap());
+            }
+        }
+    }
 }
