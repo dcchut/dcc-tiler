@@ -1,16 +1,15 @@
-extern crate tilelib;
-
+use dcc_tiler::board::RectangularBoard;
+use dcc_tiler::graph::BoardGraph;
+use dcc_tiler::tile::{Tile, TileCollection};
 use num::{BigUint, One, Zero};
-use tilelib::board::RectangularBoard;
-use tilelib::graph::BoardGraph;
-use tilelib::tile::{Tile, TileCollection};
 
 use clap::{App, Arg};
 use rand::Rng;
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
-use tilelib::render::render_single_tiling_from_vec;
+
+use dcc_tiler::render::render_single_tiling_from_vec;
 
 #[macro_use]
 extern crate clap;
@@ -66,7 +65,7 @@ impl Tiler {
                     for board in boards {
                         *count_updates
                             .entry(board.clone())
-                            .or_insert(num::BigUint::zero()) += current_count;
+                            .or_insert_with(num::BigUint::zero) += current_count;
 
                         if board.is_all_marked() {
                             completed_boards.insert(board);
@@ -97,7 +96,9 @@ impl Tiler {
 
                         // update the counts
                         for (board, count) in count_updates {
-                            let entry = counter_write.entry(board).or_insert(num::BigUint::zero());
+                            let entry = counter_write
+                                .entry(board)
+                                .or_insert_with(num::BigUint::zero);
                             (*entry) += count;
                         }
                     }
@@ -153,7 +154,7 @@ impl Tiler {
 
                 if let Some(edges) = g.get_edges(board_index) {
                     for edge in edges {
-                        let entry = count_map.entry(*edge).or_insert(BigUint::zero());
+                        let entry = count_map.entry(*edge).or_insert_with(BigUint::zero);
                         (*entry) += c.clone();
 
                         next_stack.insert(*edge);
@@ -245,7 +246,7 @@ impl Tiler {
         Arc::clone(self.graph.as_ref().unwrap())
     }
 
-    pub fn get_single_tiling(&mut self, limit : usize) -> Option<Vec<RectangularBoard>> {
+    pub fn get_single_tiling(&mut self, limit: usize) -> Option<Vec<RectangularBoard>> {
         let mut stack = vec![vec![self.initial_board.clone()]];
         let mut completed_tilings = Vec::new();
 
@@ -294,7 +295,8 @@ arg_enum! {
     #[derive(Debug, Copy, Clone)]
     pub enum TileType {
         LTile,
-        TTile
+        TTile,
+        BoxTile,
     }
 }
 
@@ -321,7 +323,7 @@ fn main() {
                 .help("The type of board to use")
                 .possible_values(&BoardType::variants())
                 .default_value("LBoard")
-                .index(3),
+                .long("board_type")
         )
         .arg(
             Arg::with_name("board_scale")
@@ -334,7 +336,7 @@ fn main() {
                 .help("The type of tile to use")
                 .possible_values(&TileType::variants())
                 .default_value("LTile")
-                .index(4),
+                .long("tile_type")
         )
         .arg(
             Arg::with_name("tile_size")
@@ -394,6 +396,7 @@ fn main() {
     let tile = match tile_type {
         TileType::LTile => Tile::l_tile(tile_size),
         TileType::TTile => Tile::t_tile(tile_size),
+        TileType::BoxTile => Tile::box_tile(),
     };
 
     let tiles = TileCollection::from(tile);
@@ -426,7 +429,7 @@ fn main() {
 
         if matches.is_present("count") {
             // just do a quick tilings count
-            dbg!(tiler.count_tilings());
+            println!("{} tilings found", tiler.count_tilings());
         } else if matches.is_present("single") {
             let tiling = tiler.get_single_tiling(1000);
 

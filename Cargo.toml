@@ -1,13 +1,18 @@
 [package]
-name = "rs-tiler"
+name = "dcc-tiler"
 version = "0.1.0"
 authors = ["Robert Usher <266585+dcchut@users.noreply.github.com>"]
 edition = "2018"
 
-[workspace]
+[lib]
+name = "dcc_tiler"
+path = "src/lib.rs"
+
+[[bin]]
+name = "dcc_tiler_cli"
+path = "src/bin/main.rs"
 
 [dependencies]
-tilelib = { path = "tilelib" }
 clap = "2.32.0"
 rayon = "1.0"
 serde_json = "1.0"
@@ -15,3 +20,5 @@ serde = "1.0"
 serde_derive = "1.0"
 rand = "0.6.5"
 num = "0.2"
+simplesvg = "0.4.0"
+time = "0.1"

@@ -1,0 +1,78 @@
+<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg">
+<g style="fill:#9c3848;">
+<rect x="160" y="60" width="50" height="50"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="160" y1="60" x2="160" y2="110"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="210" y1="60" x2="210" y2="110"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="160" y1="110" x2="210" y2="110"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="160" y1="60" x2="210" y2="60"/>
+</g>
+<g style="fill:#7cb287;">
+<rect x="110" y="60" width="50" height="50"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="110" y1="60" x2="110" y2="110"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="160" y1="60" x2="160" y2="110"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="110" y1="110" x2="160" y2="110"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="110" y1="60" x2="160" y2="60"/>
+</g>
+<g style="fill:#fbdb88;">
+<rect x="60" y="60" width="50" height="50"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="60" y1="60" x2="60" y2="110"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="110" y1="60" x2="110" y2="110"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="60" y1="110" x2="110" y2="110"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="60" y1="60" x2="110" y2="60"/>
+</g>
+<g style="fill:#1e3888;">
+<rect x="10" y="60" width="50" height="50"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="10" y1="60" x2="10" y2="110"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="60" y1="60" x2="60" y2="110"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="10" y1="110" x2="60" y2="110"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="10" y1="60" x2="60" y2="60"/>
+</g>
+<g style="fill:#4773aa;">
+<rect x="10" y="10" width="50" height="50"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="10" y1="10" x2="10" y2="60"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="60" y1="10" x2="60" y2="60"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="10" y1="60" x2="60" y2="60"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="10" y1="10" x2="60" y2="10"/>
+</g>
+</svg>
+

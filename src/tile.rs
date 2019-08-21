@@ -110,6 +110,10 @@ impl Tile {
         Tile::new(directions)
     }
 
+    pub fn box_tile() -> Self {
+        Tile::new(Vec::new())
+    }
+
     pub fn t_tile(length: usize) -> Self {
         assert!(length > 0);
 
@@ -173,7 +177,7 @@ impl TileCollection {
         self.contains_single_tile
     }
 
-    pub fn iter<'b>(&'b self) -> Box<Iterator<Item = &Tile> + 'b> {
+    pub fn iter<'b>(&'b self) -> Box<dyn Iterator<Item = &Tile> + 'b> {
         Box::new(self.tiles.iter())
     }
 }
