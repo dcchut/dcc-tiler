@@ -95,8 +95,10 @@ impl Tile {
     /// # Examples
     ///
     /// ```
+    /// use dcc_tiler::tile::{Tile, Direction};
+    ///
     /// let tile = Tile::l_tile(2);
-    /// assert_eq!(tile, vec![Direction::Left, Direction::Up, Direction::Up]);
+    /// assert_eq!(tile.directions, vec![Direction::Left, Direction::Up]);
     /// ```
     pub fn l_tile(length: usize) -> Self {
         assert!(length > 0);
@@ -136,12 +138,14 @@ impl Tile {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
+    /// use dcc_tiler::tile::{Tile, Direction};
+    ///
     /// let l = Tile::new(vec![Direction::Left, Direction::Up, Direction::Left]);
     /// let q = Tile::new(vec![Direction::Up, Direction::Right, Direction::Up]);
     /// assert_eq!(l.rotate(), q);
     /// ```
-    fn rotate(&self) -> Tile {
+    pub fn rotate(&self) -> Tile {
         Tile::new(self.directions.iter().map(|d| d.rotate()).collect())
     }
 
@@ -149,12 +153,16 @@ impl Tile {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
+    /// use dcc_tiler::tile::{Tile, Direction, Axis};
+    ///
     /// let tile = Tile::new(vec![Direction::Left, Direction::Up, Direction::Right]);
+    /// // Reflect our tile about a vertical line
     /// let reflected_tile = tile.reflect(Axis::Vertical);
-    /// assert_eq!(reflected_tile, Tile::new(vec![Direction::Left, Direction::Down, Direction::Right]));
+    ///
+    /// assert_eq!(reflected_tile, Tile::new(vec![Direction::Right, Direction::Up, Direction::Left]));
     /// ```
-    fn reflect(&self, axis: Axis) -> Tile {
+    pub fn reflect(&self, axis: Axis) -> Tile {
         Tile::new(self.directions.iter().map(|d| d.reflect(axis)).collect())
     }
 }
@@ -185,12 +193,6 @@ impl TileCollection {
 impl From<Tile> for TileCollection {
     fn from(tile: Tile) -> Self {
         /// Generates the orbit of this tile under the symmetry + rotate actions
-        /// # Examples
-        ///
-        /// ```
-        /// let tile = Tile::l_tile(3);
-        /// assert_eq!(tile.symmetry_orbit().len(), 4);
-        /// ```
         fn symmetry_orbit(tile: Tile) -> TileCollection {
             let mut orbit = HashSet::new();
 
