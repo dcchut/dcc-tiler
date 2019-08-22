@@ -148,8 +148,8 @@ pub fn render_single_tiling<S: ::std::hash::BuildHasher>(
 
     Svg(
         vec![Fig::Multiple(boxes)],
-        50 * board.width as u32,
-        50 * board.height as u32,
+        (50 * board.width) as u32 + 2 * (padding as u32),
+        (50 * board.height) as u32 + 2 * (padding as u32),
     )
     .to_string()
 }
