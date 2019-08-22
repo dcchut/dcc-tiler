@@ -486,7 +486,7 @@ fn main() -> Result<()> {
         let mut tiler = Tiler::new(tiles, board);
 
         if matches.is_present("count") {
-            // just do a quick tilings count
+            // just do a quick tilings count - no need to generate the tiling graph
             println!("{} tilings found", tiler.count_tilings());
         } else if matches.is_present("single") {
             let tiling = tiler.get_single_tiling(1000);

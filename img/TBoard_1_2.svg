@@ -1,80 +1,65 @@
-<svg width="420" height="220" xmlns="http://www.w3.org/2000/svg">
+<svg width="320" height="220" xmlns="http://www.w3.org/2000/svg">
 <g style="fill:#7cb287;">
-<rect x="360" y="160" width="50" height="50"/>
+<rect x="160" y="60" width="50" height="50"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="360" y1="160" x2="360" y2="210"/>
+<line x1="160" y1="60" x2="160" y2="110"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="410" y1="160" x2="410" y2="210"/>
+<line x1="210" y1="60" x2="210" y2="110"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="360" y1="210" x2="410" y2="210"/>
+<line x1="160" y1="110" x2="210" y2="110"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="360" y1="160" x2="410" y2="160"/>
+<line x1="160" y1="60" x2="210" y2="60"/>
 </g>
 <g style="fill:#fbdb88;">
-<rect x="360" y="110" width="50" height="50"/>
+<rect x="160" y="10" width="50" height="50"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="360" y1="110" x2="360" y2="160"/>
+<line x1="160" y1="10" x2="160" y2="60"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="410" y1="110" x2="410" y2="160"/>
+<line x1="210" y1="10" x2="210" y2="60"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="360" y1="160" x2="410" y2="160"/>
+<line x1="160" y1="60" x2="210" y2="60"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="360" y1="110" x2="410" y2="110"/>
+<line x1="160" y1="10" x2="210" y2="10"/>
 </g>
 <g style="fill:#1e3888;">
-<rect x="310" y="110" width="50" height="50"/>
+<rect x="110" y="60" width="50" height="50"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="310" y1="110" x2="310" y2="160"/>
+<line x1="110" y1="60" x2="110" y2="110"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="360" y1="110" x2="360" y2="160"/>
+<line x1="160" y1="60" x2="160" y2="110"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="310" y1="160" x2="360" y2="160"/>
+<line x1="110" y1="110" x2="160" y2="110"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="310" y1="110" x2="360" y2="110"/>
+<line x1="110" y1="60" x2="160" y2="60"/>
 </g>
 <g style="fill:#4773aa;">
-<rect x="310" y="160" width="50" height="50"/>
+<rect x="110" y="10" width="50" height="50"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="310" y1="160" x2="310" y2="210"/>
+<line x1="110" y1="10" x2="110" y2="60"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="360" y1="160" x2="360" y2="210"/>
+<line x1="160" y1="10" x2="160" y2="60"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="310" y1="210" x2="360" y2="210"/>
+<line x1="110" y1="60" x2="160" y2="60"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
-<line x1="310" y1="160" x2="360" y2="160"/>
+<line x1="110" y1="10" x2="160" y2="10"/>
 </g>
 <g style="fill:#f5e663;">
-<rect x="260" y="110" width="50" height="50"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="260" y1="110" x2="260" y2="160"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="310" y1="110" x2="310" y2="160"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="260" y1="160" x2="310" y2="160"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="260" y1="110" x2="310" y2="110"/>
-</g>
-<g style="fill:#ffad69;">
 <rect x="260" y="160" width="50" height="50"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
@@ -88,6 +73,21 @@
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
 <line x1="260" y1="160" x2="310" y2="160"/>
+</g>
+<g style="fill:#ffad69;">
+<rect x="260" y="110" width="50" height="50"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="260" y1="110" x2="260" y2="160"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="310" y1="110" x2="310" y2="160"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="260" y1="160" x2="310" y2="160"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="260" y1="110" x2="310" y2="110"/>
 </g>
 <g style="fill:#9c3848;">
 <rect x="210" y="110" width="50" height="50"/>
@@ -180,21 +180,6 @@
 <line x1="110" y1="160" x2="160" y2="160"/>
 </g>
 <g style="fill:#ffad69;">
-<rect x="60" y="160" width="50" height="50"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="60" y1="160" x2="60" y2="210"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="110" y1="160" x2="110" y2="210"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="60" y1="210" x2="110" y2="210"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="60" y1="160" x2="110" y2="160"/>
-</g>
-<g style="fill:#9c3848;">
 <rect x="60" y="110" width="50" height="50"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
@@ -209,37 +194,22 @@
 <g style="stroke:#000000;stroke-width:0.5;">
 <line x1="60" y1="110" x2="110" y2="110"/>
 </g>
+<g style="fill:#9c3848;">
+<rect x="60" y="160" width="50" height="50"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="60" y1="160" x2="60" y2="210"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="110" y1="160" x2="110" y2="210"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="60" y1="210" x2="110" y2="210"/>
+</g>
+<g style="stroke:#000000;stroke-width:0.5;">
+<line x1="60" y1="160" x2="110" y2="160"/>
+</g>
 <g style="fill:#7cb287;">
-<rect x="60" y="60" width="50" height="50"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="60" y1="60" x2="60" y2="110"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="110" y1="60" x2="110" y2="110"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="60" y1="110" x2="110" y2="110"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="60" y1="60" x2="110" y2="60"/>
-</g>
-<g style="fill:#fbdb88;">
-<rect x="60" y="10" width="50" height="50"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="60" y1="10" x2="60" y2="60"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="110" y1="10" x2="110" y2="60"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="60" y1="60" x2="110" y2="60"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="60" y1="10" x2="110" y2="10"/>
-</g>
-<g style="fill:#1e3888;">
 <rect x="10" y="160" width="50" height="50"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
@@ -254,7 +224,7 @@
 <g style="stroke:#000000;stroke-width:0.5;">
 <line x1="10" y1="160" x2="60" y2="160"/>
 </g>
-<g style="fill:#4773aa;">
+<g style="fill:#fbdb88;">
 <rect x="10" y="110" width="50" height="50"/>
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
@@ -268,36 +238,6 @@
 </g>
 <g style="stroke:#000000;stroke-width:0.5;">
 <line x1="10" y1="110" x2="60" y2="110"/>
-</g>
-<g style="fill:#f5e663;">
-<rect x="10" y="60" width="50" height="50"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="10" y1="60" x2="10" y2="110"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="60" y1="60" x2="60" y2="110"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="10" y1="110" x2="60" y2="110"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="10" y1="60" x2="60" y2="60"/>
-</g>
-<g style="fill:#ffad69;">
-<rect x="10" y="10" width="50" height="50"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="10" y1="10" x2="10" y2="60"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="60" y1="10" x2="60" y2="60"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="10" y1="60" x2="60" y2="60"/>
-</g>
-<g style="stroke:#000000;stroke-width:0.5;">
-<line x1="10" y1="10" x2="60" y2="10"/>
 </g>
 </svg>
 
