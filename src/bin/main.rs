@@ -10,6 +10,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
 use dcc_tiler::render::render_single_tiling_from_vec;
+use std::io::{Result, Write};
 
 #[macro_use]
 extern crate clap;
@@ -246,6 +247,51 @@ impl Tiler {
         Arc::clone(self.graph.as_ref().unwrap())
     }
 
+    // Maybe change String to Into<PathBuf>?
+    pub fn render_all_tilings(&mut self, output_filename: &str) -> Result<()> {
+        let graph = self.graph();
+        let graph = graph.read().expect("Unable to read graph");
+        let mut tiling_counter = 0;
+
+        let path = std::path::Path::new(output_filename);
+        let file = std::fs::File::create(path)?;
+        let mut zip = zip::ZipWriter::new(file);
+
+        if let Some(complete) = graph.get_complete_index() {
+            let board = graph.get_node(complete).unwrap();
+
+            let mut stack = vec![(complete, vec![board])];
+
+            while !stack.is_empty() {
+                let (index, boards) = stack.pop().unwrap();
+
+                if index == 0 {
+                    // render this tiling
+                    let tiling = render_single_tiling_from_vec(boards);
+
+                    // filename for this tiling
+                    let tiling_filename = tiling_counter.to_string() + ".svg";
+
+                    zip.start_file(tiling_filename, Default::default())?;
+                    zip.write_all(tiling.as_bytes())?;
+
+                    tiling_counter += 1;
+                } else {
+                    for e in graph.get_rev_edges(index).unwrap() {
+                        let mut new_boards = boards.clone();
+                        new_boards.push(graph.get_node(*e).unwrap());
+
+                        stack.push((*e, new_boards));
+                    }
+                }
+            }
+        }
+
+        let _ = zip.finish()?;
+
+        Ok(())
+    }
+
     pub fn get_single_tiling(&mut self, limit: usize) -> Option<Vec<RectangularBoard>> {
         let mut stack = vec![vec![self.initial_board.clone()]];
         let mut completed_tilings = Vec::new();
@@ -300,7 +346,7 @@ arg_enum! {
     }
 }
 
-fn main() {
+fn main() -> Result<()> {
     let matches = App::new("rs-tiler")
         .version("1.0")
         .author("Robert Usher")
@@ -323,7 +369,7 @@ fn main() {
                 .help("The type of board to use")
                 .possible_values(&BoardType::variants())
                 .default_value("LBoard")
-                .long("board_type")
+                .long("board_type"),
         )
         .arg(
             Arg::with_name("board_scale")
@@ -336,7 +382,7 @@ fn main() {
                 .help("The type of tile to use")
                 .possible_values(&TileType::variants())
                 .default_value("LTile")
-                .long("tile_type")
+                .long("tile_type"),
         )
         .arg(
             Arg::with_name("tile_size")
@@ -351,6 +397,18 @@ fn main() {
                 .help("Computes a single tiling")
                 .conflicts_with("count")
                 .conflicts_with("graph"),
+        )
+        .arg(
+            Arg::with_name("all")
+                .short("a")
+                .long("all")
+                .help("Renders all tilings to specified file in ZIP format")
+                .conflicts_with("single")
+                .conflicts_with("count")
+                .conflicts_with("graph")
+                .conflicts_with("scaling")
+                .takes_value(true)
+                .required(false),
         )
         .arg(
             Arg::with_name("count")
@@ -434,10 +492,13 @@ fn main() {
             let tiling = tiler.get_single_tiling(1000);
 
             if let Some(tiling) = tiling {
-                println!("{}", render_single_tiling_from_vec(tiling));
+                println!("{}", render_single_tiling_from_vec(tiling.iter().collect()));
             } else {
                 println!("No tilings found!");
             }
+        } else if matches.is_present("all") {
+            let filename = value_t!(matches.value_of("all"), String).unwrap_or_else(|e| e.exit());
+            tiler.render_all_tilings(&filename)?;
         } else if matches.is_present("graph") {
             let board_graph = tiler.graph();
 
@@ -448,4 +509,6 @@ fn main() {
             }
         }
     }
+
+    Ok(())
 }

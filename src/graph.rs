@@ -15,9 +15,11 @@ pub struct BoardGraph {
     // to another by placing down a tile.
     edges: HashMap<usize, HashSet<usize>>,
 
+    // This hashmap keeps track of edges "going backwards"
+    rev_edges: HashMap<usize, HashSet<usize>>,
+
     // If a complete tiling of an initial board (index 0 in nodes_arena)
     complete_indices: HashSet<usize>,
-    //complete_index : Option<usize>,
 }
 
 impl BoardGraph {
@@ -26,6 +28,7 @@ impl BoardGraph {
             nodes_arena: Vec::new(),
             nodes_arena_index: 0,
             edges: HashMap::new(),
+            rev_edges: HashMap::new(),
             complete_indices: HashSet::new(),
         }
     }
@@ -55,6 +58,10 @@ impl BoardGraph {
         self.edges.get(&i)
     }
 
+    pub fn get_rev_edges(&self, i: usize) -> Option<&HashSet<usize>> {
+        self.rev_edges.get(&i)
+    }
+
     pub fn get_node(&self, i: usize) -> Option<&RectangularBoard> {
         self.nodes_arena.get(i)
     }
@@ -70,5 +77,9 @@ impl BoardGraph {
         assert!(s < self.nodes_arena_index && t < self.nodes_arena_index);
 
         self.edges.entry(s).or_insert_with(HashSet::new).insert(t);
+        self.rev_edges
+            .entry(t)
+            .or_insert_with(HashSet::new)
+            .insert(s);
     }
 }

@@ -3,7 +3,7 @@ use rand::Rng;
 use simplesvg::{Attr, Color, Fig, Svg};
 use std::collections::{HashMap, HashSet};
 
-pub fn render_single_tiling_from_vec(boards: Vec<RectangularBoard>) -> String {
+pub fn render_single_tiling_from_vec(boards: Vec<&RectangularBoard>) -> String {
     let mut tile_hashmap = HashMap::new();
 
     for i in (1..boards.len()).rev() {
@@ -29,7 +29,6 @@ pub fn render_single_tiling<S: ::std::hash::BuildHasher>(
         Color(245, 230, 99),
         Color(255, 173, 105),
         Color(156, 56, 72),
-        //Color(95, 199, 227),
         Color(124, 178, 135),
         Color(251, 219, 136),
     ];
