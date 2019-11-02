@@ -199,34 +199,34 @@ impl Tiler {
                     )
                 })
                 .collect::<Vec<_>>()
-                {
-                    // find / create the node id for this board
-                    let mut g = graph.write().unwrap();
+            {
+                // find / create the node id for this board
+                let mut g = graph.write().unwrap();
 
-                    for board in child_boards {
-                        let complete = board.is_all_marked();
+                for board in child_boards {
+                    let complete = board.is_all_marked();
 
-                        // We don't want to use an entry here because it would mean
-                        // having to clone our board every single time, even if the board
-                        // was already in our hashmap
-                        let child_index = if board_map.contains_key(&board) {
-                            board_map[&board]
-                        } else {
-                            let index = g.add_node(board.clone());
-                            board_map.insert(board, index);
-                            index
-                        };
+                    // We don't want to use an entry here because it would mean
+                    // having to clone our board every single time, even if the board
+                    // was already in our hashmap
+                    let child_index = if board_map.contains_key(&board) {
+                        board_map[&board]
+                    } else {
+                        let index = g.add_node(board.clone());
+                        board_map.insert(board, index);
+                        index
+                    };
 
-                        g.add_edge(board_index, child_index);
+                    g.add_edge(board_index, child_index);
 
-                        if complete {
-                            // mark this as a finished node in our graph
-                            g.mark_node_as_complete(child_index);
-                        } else {
-                            next_iteration.push(child_index);
-                        }
+                    if complete {
+                        // mark this as a finished node in our graph
+                        g.mark_node_as_complete(child_index);
+                    } else {
+                        next_iteration.push(child_index);
                     }
                 }
+            }
 
             stack = next_iteration;
         }
@@ -323,4 +323,3 @@ impl Tiler {
         None
     }
 }
-
