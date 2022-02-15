@@ -3,12 +3,12 @@ use dcc_tiler::graph::BoardGraph;
 use dcc_tiler::tile::TileCollection;
 use num::{BigUint, One, Zero};
 
-use rand::Rng;
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
 use dcc_tiler::render::render_single_tiling_from_vec;
+use rand::seq::SliceRandom;
 use std::io::{Result, Write};
 
 pub struct Tiler {
@@ -51,7 +51,7 @@ impl Tiler {
             let handles = stack
                 .par_iter()
                 .map(|b| {
-                    let current_count = &counter.read().unwrap()[&b];
+                    let current_count = &counter.read().unwrap()[b];
 
                     let boards = b.place_tile(&self.tiles);
 
@@ -314,12 +314,6 @@ impl Tiler {
             }
         }
 
-        if !completed_tilings.is_empty() {
-            // Select a random solution from those already found
-            let solution_index = rand::thread_rng().gen_range(0, completed_tilings.len());
-            return Some(completed_tilings[solution_index].clone());
-        }
-
-        None
+        completed_tilings.choose(&mut rand::thread_rng()).cloned()
     }
 }

@@ -8,20 +8,20 @@ There are currently two types of tiles supported, which are explained below.
 An `LTile` of size `n` is the L-tetronimo with `n + 1` blocks.  For example
 an`LTile` of size 3 is:
 
-![dcc_tiler_cli --single --board_type LBoard --tile_type LTile 3 3](img/LTile_3.svg)
+![dcc_tiler_cli --single --board-type LBoard --tile-type LTile 3 3](img/LTile_3.svg)
 
 while an `LTile` of size 5 is:
 
-![dcc_tiler_cli --single --board_type LBoard --tile_type LTile 5 5](img/LTile_5.svg)
+![dcc_tiler_cli --single --board-type LBoard --tile-type LTile 5 5](img/LTile_5.svg)
 
 #### `TTile`
 A `TTile` of size `n` is the T-tetronimo with `2(n+1)` blocks.  For example, a `TTile` of size 1 is:
 
-![dcc_tiler_cli --single --board_type TBoard --tile_type TTile 1 1](img/TTile_1.svg)
+![dcc_tiler_cli --single --board-type TBoard --tile-type TTile 1 1](img/TTile_1.svg)
 
 while a `TTile` of size 2 is:
 
-![dcc_tiler_cli --single --board_type TBoard --tile_type TTile 2 2](img/TTile_2.svg)
+![dcc_tiler_cli --single --board-type TBoard --tile-type TTile 2 2](img/TTile_2.svg)
 
 ### Basic board terminology
 
@@ -35,19 +35,19 @@ box in this tile is replaced by `board_scale ** 2` boxes.
 
 For example, an `LBoard` with size 4 and scale 1 looks like:
 
-![dcc_tiler_cli --single --scale 1 --board_type LBoard --tile_type BoxTile 4 0](img/LBoard_4_1.svg)
+![dcc_tiler_cli --single --scale 1 --board-type LBoard --tile-type BoxTile 4 0](img/LBoard_4_1.svg)
 
 while bumping the scale up to 2 results in:
 
-![dcc_tiler_cli --single --scale 2 --board_type LBoard --tile_type BoxTile 4 0](img/LBoard_4_2.svg)
+![dcc_tiler_cli --single --scale 2 --board-type LBoard --tile-type BoxTile 4 0](img/LBoard_4_2.svg)
 
 A `TBoard` with size 1 and scale 1 looks like:
 
-![dcc_tiler_cli --single --scale 1 --board_type TBoard --tile_type BoxTile 1 0](img/TBoard_1_1.svg)
+![dcc_tiler_cli --single --scale 1 --board-type TBoard --tile-type BoxTile 1 0](img/TBoard_1_1.svg)
 
 while bumping the scale up to 2 results in:
 
-![dcc_tiler_cli --single --scale 2 --board_type TBoard --tile_type BoxTile 1 0](img/TBoard_1_2.svg)
+![dcc_tiler_cli --single --scale 2 --board-type TBoard --tile-type BoxTile 1 0](img/TBoard_1_2.svg)
 
 #### `Rectangle`
 
@@ -55,11 +55,11 @@ There are two parameters that affect the shape/size of a rectangular board: `boa
 
 For example, a `Rectangle` with `board_size = 3` and `width = 5` looks like:
 
-![dcc_tiler_cli --single --board_type Rectangle --width 5 --tile_type BoxTile 3 0](img/Rectangle_3_5.svg)
+![dcc_tiler_cli --single --board-type Rectangle --width 5 --tile-type BoxTile 3 0](img/Rectangle_3_5.svg)
 
 While a `Rectangle` with `board_size = 6` and `width = 4` looks like:
 
-![dcc_tiler_cli --single --board_type Rectangle --width 4 --tile_type BoxTile 6 0](img/Rectangle_6_4.svg)
+![dcc_tiler_cli --single --board-type Rectangle --width 4 --tile-type BoxTile 6 0](img/Rectangle_6_4.svg)
 
 *Note*: The scale parameter is ignored for `Rectangle`.
 
@@ -68,7 +68,7 @@ While a `Rectangle` with `board_size = 6` and `width = 4` looks like:
 The following command counts the number of tilings of an LBoard of size 2 by LTile's of size 2,
 with scale parameter `x`:
 
-`dcc_tiler_cli --count --scale x --board_type LBoard --tile_type LTile 2 2`
+`dcc_tiler_cli --count --scale x --board-type LBoard --tile-type LTile 2 2`
 
 This results in the following tiling counts as `x` varies:
 
@@ -89,7 +89,7 @@ This sequence of integers (`1, 1, 4, 409, ...`) does not appear in the OEIS.
 
 The command here is:
 
-`dcc_tiler_cli --count --scale x --board_type TBoard --tile_type TTile 1 1`
+`dcc_tiler_cli --count --scale x --board-type TBoard --tile-type TTile 1 1`
 
 *Exercise:* Show that if `x > 1` and `x % 4 != 0` then there are no such tilings!
 
@@ -106,7 +106,7 @@ This results in the following tiling counts as `x` varies:
 
 Instead of modifying the scale parameter each time, you can instead use the `--scaling` option as follows:
 
-`dcc_tiler_cli --scaling --board_type TBoard --tile_type TTile 1 1`
+`dcc_tiler_cli --scaling --board-type TBoard --tile-type TTile 1 1`
 
 which results in the following output:
 
@@ -126,18 +126,18 @@ scale(8), 655302180 tilings
 
 Many combinations are possible.  An example is:
 
-`dcc_tiler_cli --count --scale 4 --board_type LBoard --tile_type TTile 3 1`
+`dcc_tiler_cli --count --scale 4 --board-type LBoard --tile-type TTile 3 1`
 
 which counts 54 tilings.  An example of such a tiling is:
 
-![dcc_tiler_cli --single --scale 4 --board_type LBoard --tile_type TTile 3 1](img/LBoard_3_4_TTile_1.svg)
+![dcc_tiler_cli --single --scale 4 --board-type LBoard --tile-type TTile 3 1](img/LBoard_3_4_TTile_1.svg)
 
 ### Counting tilings of a rectangle by TTiles
 
 Suppose we wanted to count how many ways there are to tile an `n x n` rectangle
 using T-tetronimos of size 1.  The command here is:
 
-`dcc_tiler_cli --count --board_type Rectangle --width n --tile_type TTile n 1`
+`dcc_tiler_cli --count --board-type Rectangle --width n --tile-type TTile n 1`
 
 which results in the following output:
 
@@ -158,7 +158,7 @@ After counting the number of tilings, it is often useful to render an image of s
 inspection.  We know from the previous section that there are 54 tilings of an LBoard of size 3, scale 4
 by TTile's of size 1.  To generate such a tiling, we use the `--single` option and pipe the output into `output.svg`:
 
-`dcc_tiler_cli --single --scale 4 --board_type LBoard --tile_type TTile 3 1 > output.svg`
+`dcc_tiler_cli --single --scale 4 --board-type LBoard --tile-type TTile 3 1 > output.svg`
 
 *Note*: The CLI generates at most 1000 tilings and then selects a single tiling to render from among them,
  so there is no guarantee that running this command repeatedly will generate all possible tilings.
@@ -168,7 +168,7 @@ by TTile's of size 1.  To generate such a tiling, we use the `--single` option a
 Instead of generating a single image, you can also generate a ZIP file containing all tilings using the `--all <filename>` command.
 For example:
 
-`dcc_tiler_cli --all tilings.zip --scale 4 --board_type LBoard --tile_type TTile 3 1`
+`dcc_tiler_cli --all tilings.zip --scale 4 --board-type LBoard --tile-type TTile 3 1`
 
 ### Tiling graphs
 
