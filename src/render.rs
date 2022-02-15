@@ -1,4 +1,5 @@
 use crate::board::RectangularBoard;
+use rand::seq::SliceRandom;
 use rand::Rng;
 use simplesvg::{Attr, Color, Fig, Svg};
 use std::collections::{HashMap, HashSet};
@@ -34,17 +35,16 @@ pub fn render_single_tiling<S: ::std::hash::BuildHasher>(
     ];
 
     let mut boxes = Vec::new();
+    let mut rng = rand::thread_rng();
 
     // choose a random initial colour
     // we do this so that when you render a single tile, it won't always be the first colour in the colors vector
-    let mut color_index = rand::thread_rng().gen_range(0, colors.len());
+    let mut color_index = rng.gen_range(0..colors.len());
     let mut current = board;
 
-    while tile_hashmap.contains_key(current) {
+    while let Some(board) = tile_hashmap.get(current) {
         // choose a random source for this board state
-        let next = rand::thread_rng().gen_range(0, tile_hashmap[current].len());
-        let next_board = tile_hashmap.get(current).unwrap().get(next).unwrap();
-
+        let next_board = board.choose(&mut rng).unwrap();
         let mut tiled_positions = HashSet::new();
 
         // compute the tile that was placed here
@@ -74,7 +74,7 @@ pub fn render_single_tiling<S: ::std::hash::BuildHasher>(
                 Right,
                 Top,
                 Bottom,
-            };
+            }
 
             // helper function to construct our borders
             let border = |x: usize, y: usize, b: Border, gray: bool| {
@@ -114,7 +114,7 @@ pub fn render_single_tiling<S: ::std::hash::BuildHasher>(
                 *x,
                 *y,
                 Border::Left,
-                tiled_positions.contains(&(*x - 1, *y)),
+                *x == 0 || tiled_positions.contains(&(*x - 1, *y)),
             ));
             // right border
             boxes.push(border(
@@ -135,7 +135,7 @@ pub fn render_single_tiling<S: ::std::hash::BuildHasher>(
                 *x,
                 *y,
                 Border::Bottom,
-                tiled_positions.contains(&(*x, *y - 1)),
+                *y == 0 || tiled_positions.contains(&(*x, *y - 1)),
             ));
         }
 

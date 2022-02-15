@@ -1,143 +1,116 @@
 use dcc_tiler::board::RectangularBoard;
 use dcc_tiler::tile::{Tile, TileCollection};
 
-use clap::{App, Arg};
+use clap::{ArgEnum, Parser};
 
 use dcc_tiler::render::render_single_tiling_from_vec;
 use std::io::Result;
 use tiler::Tiler;
 
-#[macro_use]
-extern crate clap;
-
-arg_enum! {
-    #[derive(Debug, Copy, Clone)]
-    pub enum BoardType {
-        Rectangle,
-        LBoard,
-        TBoard,
-    }
+#[derive(Debug, Copy, Clone, ArgEnum)]
+pub enum BoardType {
+    #[clap(name = "Rectangle")]
+    Rectangle,
+    #[clap(name = "LBoard")]
+    LBoard,
+    #[clap(name = "TBoard")]
+    TBoard,
 }
 
-arg_enum! {
-    #[derive(Debug, Copy, Clone)]
-    pub enum TileType {
-        LTile,
-        TTile,
-        BoxTile,
-    }
+#[derive(Debug, Copy, Clone, ArgEnum)]
+pub enum TileType {
+    #[clap(name = "LTile")]
+    LTile,
+    #[clap(name = "TTile")]
+    TTile,
+    #[clap(name = "BoxTile")]
+    BoxTile,
+}
+
+#[derive(Parser)]
+#[clap(author, version, about, long_about = None)]
+struct Cli {
+    #[clap(help = "The size of the board to tile")]
+    board_size: usize,
+
+    #[clap(help = "The size of the tile")]
+    tile_size: usize,
+
+    #[clap(short, long, help = "The width of the board")]
+    width: Option<usize>,
+
+    #[clap(long, arg_enum, default_value_t = BoardType::LBoard, help = "The type of board to use")]
+    board_type: BoardType,
+
+    #[clap(
+        long = "scale",
+        default_value_t = 1,
+        help = "The board scale ot use, if using an LBoard"
+    )]
+    board_scale: usize,
+
+    #[clap(long, arg_enum, default_value_t = TileType::LTile, help = "The type of tile to use")]
+    tile_type: TileType,
+
+    #[clap(
+        short,
+        long,
+        help = "Compute a single tiling",
+        conflicts_with = "count",
+        conflicts_with = "graph"
+    )]
+    single: bool,
+
+    #[clap(
+        short,
+        long,
+        help = "Render all tilings to a specified file in ZIP format",
+        conflicts_with = "single",
+        conflicts_with = "count",
+        conflicts_with = "graph",
+        conflicts_with = "scaling"
+    )]
+    all: Option<String>,
+
+    #[clap(
+        short,
+        long,
+        help = "Count all tilings",
+        conflicts_with = "single",
+        conflicts_with = "graph"
+    )]
+    count: bool,
+
+    #[clap(
+        short,
+        long,
+        help = "Compute the full tilings graph",
+        conflicts_with = "count",
+        conflicts_with = "single"
+    )]
+    graph: bool,
+
+    #[clap(
+        long,
+        help = "Compute the tiling count for different value of the scale parameter",
+        conflicts_with = "graph",
+        conflicts_with = "count",
+        conflicts_with = "single"
+    )]
+    scaling: bool,
 }
 
 mod tiler;
 
 fn main() -> Result<()> {
-    let matches = App::new("rs-tiler")
-        .version("1.0")
-        .author("Robert Usher")
-        .about("Computes various tilings")
-        .arg(
-            Arg::with_name("board_size")
-                .help("The size of the board to tile")
-                .index(1)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("width")
-                .short("w")
-                .long("width")
-                .takes_value(true)
-                .help("The (optional) width of the board"),
-        )
-        .arg(
-            Arg::with_name("board_type")
-                .help("The type of board to use")
-                .possible_values(&BoardType::variants())
-                .default_value("LBoard")
-                .long("board_type"),
-        )
-        .arg(
-            Arg::with_name("board_scale")
-                .help("The board scale to use, if using an LBoard")
-                .long("scale")
-                .default_value("1"),
-        )
-        .arg(
-            Arg::with_name("tile_type")
-                .help("The type of tile to use")
-                .possible_values(&TileType::variants())
-                .default_value("LTile")
-                .long("tile_type"),
-        )
-        .arg(
-            Arg::with_name("tile_size")
-                .help("The size of the tile")
-                .index(2)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("single")
-                .short("s")
-                .long("single")
-                .help("Computes a single tiling")
-                .conflicts_with("count")
-                .conflicts_with("graph"),
-        )
-        .arg(
-            Arg::with_name("all")
-                .short("a")
-                .long("all")
-                .help("Renders all tilings to specified file in ZIP format")
-                .conflicts_with("single")
-                .conflicts_with("count")
-                .conflicts_with("graph")
-                .conflicts_with("scaling")
-                .takes_value(true)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name("count")
-                .short("c")
-                .long("count")
-                .help("Counts all tilings")
-                .conflicts_with("single")
-                .conflicts_with("graph"),
-        )
-        .arg(
-            Arg::with_name("graph")
-                .short("g")
-                .long("graph")
-                .help("Computes the full tilings graph")
-                .conflicts_with("count")
-                .conflicts_with("single"),
-        )
-        .arg(
-            Arg::with_name("scaling")
-                .long("scaling")
-                .help("Computes the tiling count for different values of the scale parameter")
-                .conflicts_with("graph")
-                .conflicts_with("count")
-                .conflicts_with("single"),
-        )
-        .get_matches();
+    let cli: Cli = Cli::parse();
 
-    let board_type =
-        value_t!(matches.value_of("board_type"), BoardType).unwrap_or_else(|e| e.exit());
-    let tile_type = value_t!(matches.value_of("tile_type"), TileType).unwrap_or_else(|e| e.exit());
-    let board_size = value_t!(matches.value_of("board_size"), usize).unwrap_or_else(|e| e.exit());
-
-    let board_width = if matches.is_present("width") {
-        value_t!(matches.value_of("width"), usize).unwrap_or_else(|e| e.exit())
-    } else {
-        board_size
-    };
-
-    let tile_size = value_t!(matches.value_of("tile_size"), usize).unwrap_or_else(|e| e.exit());
-    let board_scale = value_t!(matches.value_of("board_scale"), usize).unwrap_or_else(|e| e.exit());
+    let board_width = cli.width.unwrap_or(cli.board_size);
 
     // Create a colletion of tiles based on the tile(s) specified by the user
-    let tile = match tile_type {
-        TileType::LTile => Tile::l_tile(tile_size),
-        TileType::TTile => Tile::t_tile(tile_size),
+    let tile = match cli.tile_type {
+        TileType::LTile => Tile::l_tile(cli.tile_size),
+        TileType::TTile => Tile::t_tile(cli.tile_size),
         TileType::BoxTile => Tile::box_tile(),
     };
 
@@ -153,26 +126,26 @@ fn main() -> Result<()> {
             }
         };
 
-    if matches.is_present("scaling") {
+    if cli.scaling {
         // we deal with scaling separately to appease the borrow checker
         let mut board_scale: usize = 1;
 
         loop {
             let mut tiler = Tiler::new(
                 tiles.clone(),
-                make_board(board_type, board_size, board_width, board_scale),
+                make_board(cli.board_type, cli.board_size, board_width, board_scale),
             );
             println!("scale({}), {} tilings", board_scale, tiler.count_tilings());
             board_scale += 1;
         }
     } else {
-        let board = make_board(board_type, board_size, board_width, board_scale);
+        let board = make_board(cli.board_type, cli.board_size, board_width, cli.board_scale);
         let mut tiler = Tiler::new(tiles, board);
 
-        if matches.is_present("count") {
+        if cli.count {
             // just do a quick tilings count - no need to generate the tiling graph
             println!("{} tilings found", tiler.count_tilings());
-        } else if matches.is_present("single") {
+        } else if cli.single {
             let tiling = tiler.get_single_tiling(1000);
 
             if let Some(tiling) = tiling {
@@ -180,10 +153,9 @@ fn main() -> Result<()> {
             } else {
                 println!("No tilings found!");
             }
-        } else if matches.is_present("all") {
-            let filename = value_t!(matches.value_of("all"), String).unwrap_or_else(|e| e.exit());
+        } else if let Some(filename) = cli.all {
             tiler.render_all_tilings(&filename)?;
-        } else if matches.is_present("graph") {
+        } else if cli.graph {
             let board_graph = tiler.graph();
 
             {

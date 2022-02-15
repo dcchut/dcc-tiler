@@ -271,12 +271,7 @@ impl RectangularBoard {
             covered.insert(current_position);
         }
 
-        Some(TilePosition::new(
-            position,
-            tile.clone(),
-            start_index,
-            covered,
-        ))
+        Some(TilePosition::new(covered))
     }
 
     fn mark_tile_at_position(&mut self, tp: TilePosition) {
@@ -327,25 +322,12 @@ impl Position {
 
 #[derive(Eq, Clone)]
 struct TilePosition {
-    position: Position,
-    tile: Tile,
-    start_index: usize,
     covered: HashSet<Position>,
 }
 
 impl TilePosition {
-    pub fn new(
-        position: Position,
-        tile: Tile,
-        start_index: usize,
-        covered: HashSet<Position>,
-    ) -> Self {
-        TilePosition {
-            covered,
-            position,
-            tile,
-            start_index,
-        }
+    pub fn new(covered: HashSet<Position>) -> Self {
+        TilePosition { covered }
     }
 }
 
