@@ -1,58 +1,54 @@
 use dcc_tiler::board::RectangularBoard;
 use dcc_tiler::tile::{Tile, TileCollection};
 
-use clap::{ArgEnum, Parser};
+use clap::{Parser, ValueEnum};
 
 use dcc_tiler::render::render_single_tiling_from_vec;
 use std::io::Result;
 use tiler::Tiler;
 
-#[derive(Debug, Copy, Clone, ArgEnum)]
+#[derive(Debug, Copy, Clone, ValueEnum)]
+#[value(rename_all = "PascalCase")]
 pub enum BoardType {
-    #[clap(name = "Rectangle")]
     Rectangle,
-    #[clap(name = "LBoard")]
     LBoard,
-    #[clap(name = "TBoard")]
     TBoard,
 }
 
-#[derive(Debug, Copy, Clone, ArgEnum)]
+#[derive(Debug, Copy, Clone, ValueEnum)]
+#[value(rename_all = "PascalCase")]
 pub enum TileType {
-    #[clap(name = "LTile")]
     LTile,
-    #[clap(name = "TTile")]
     TTile,
-    #[clap(name = "BoxTile")]
     BoxTile,
 }
 
 #[derive(Parser)]
-#[clap(author, version, about, long_about = None)]
+#[command(author, version, about, long_about = None)]
 struct Cli {
-    #[clap(help = "The size of the board to tile")]
+    #[arg(help = "The size of the board to tile")]
     board_size: usize,
 
-    #[clap(help = "The size of the tile")]
+    #[arg(help = "The size of the tile")]
     tile_size: usize,
 
-    #[clap(short, long, help = "The width of the board")]
+    #[arg(short, long, help = "The width of the board")]
     width: Option<usize>,
 
-    #[clap(long, arg_enum, default_value_t = BoardType::LBoard, help = "The type of board to use")]
+    #[arg(long, value_enum, default_value_t = BoardType::LBoard, help = "The type of board to use")]
     board_type: BoardType,
 
-    #[clap(
+    #[arg(
         long = "scale",
         default_value_t = 1,
         help = "The board scale ot use, if using an LBoard"
     )]
     board_scale: usize,
 
-    #[clap(long, arg_enum, default_value_t = TileType::LTile, help = "The type of tile to use")]
+    #[arg(long, value_enum, default_value_t = TileType::LTile, help = "The type of tile to use")]
     tile_type: TileType,
 
-    #[clap(
+    #[arg(
         short,
         long,
         help = "Compute a single tiling",
@@ -61,7 +57,7 @@ struct Cli {
     )]
     single: bool,
 
-    #[clap(
+    #[arg(
         short,
         long,
         help = "Render all tilings to a specified file in ZIP format",
@@ -72,7 +68,7 @@ struct Cli {
     )]
     all: Option<String>,
 
-    #[clap(
+    #[arg(
         short,
         long,
         help = "Count all tilings",
@@ -81,7 +77,7 @@ struct Cli {
     )]
     count: bool,
 
-    #[clap(
+    #[arg(
         short,
         long,
         help = "Compute the full tilings graph",
@@ -90,7 +86,7 @@ struct Cli {
     )]
     graph: bool,
 
-    #[clap(
+    #[arg(
         long,
         help = "Compute the tiling count for different value of the scale parameter",
         conflicts_with = "graph",
