@@ -1,7 +1,7 @@
 use dcc_tiler::board::RectangularBoard;
 use dcc_tiler::tile::{Tile, TileCollection};
 
-use clap::{ValueEnum, Parser};
+use clap::{Parser, ValueEnum};
 
 use dcc_tiler::render::render_single_tiling_from_vec;
 use std::io::Result;
@@ -10,7 +10,7 @@ use tiler::Tiler;
 #[derive(Debug, Copy, Clone, ValueEnum)]
 #[value(rename_all = "PascalCase")]
 pub enum BoardType {
-    Rectangle,    
+    Rectangle,
     LBoard,
     TBoard,
 }
