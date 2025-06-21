@@ -8,8 +8,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
 use dcc_tiler::render::render_single_tiling_from_vec;
-use rand::seq::SliceRandom;
+use rand::seq::IndexedRandom;
 use std::io::{Result, Write};
+use zip::write::FileOptions;
 
 pub struct Tiler {
     tiles: TileCollection,
@@ -268,7 +269,7 @@ impl Tiler {
                     // filename for this tiling
                     let tiling_filename = tiling_counter.to_string() + ".svg";
 
-                    zip.start_file(tiling_filename, Default::default())?;
+                    zip.start_file(tiling_filename, FileOptions::<()>::default())?;
                     zip.write_all(tiling.as_bytes())?;
 
                     tiling_counter += 1;
@@ -314,6 +315,6 @@ impl Tiler {
             }
         }
 
-        completed_tilings.choose(&mut rand::thread_rng()).cloned()
+        completed_tilings.choose(&mut rand::rng()).cloned()
     }
 }

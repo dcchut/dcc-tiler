@@ -1,5 +1,5 @@
 use crate::board::RectangularBoard;
-use rand::seq::SliceRandom;
+use rand::seq::IndexedRandom;
 use rand::Rng;
 use simplesvg::{Attr, Color, Fig, Svg};
 use std::collections::{HashMap, HashSet};
@@ -35,11 +35,11 @@ pub fn render_single_tiling<S: ::std::hash::BuildHasher>(
     ];
 
     let mut boxes = Vec::new();
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     // choose a random initial colour
     // we do this so that when you render a single tile, it won't always be the first colour in the colors vector
-    let mut color_index = rng.gen_range(0..colors.len());
+    let mut color_index = rng.random_range(0..colors.len());
     let mut current = board;
 
     while let Some(board) = tile_hashmap.get(current) {

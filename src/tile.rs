@@ -185,7 +185,7 @@ impl TileCollection {
         self.contains_single_tile
     }
 
-    pub fn iter<'b>(&'b self) -> Box<dyn Iterator<Item = &Tile> + 'b> {
+    pub fn iter<'b>(&'b self) -> Box<dyn Iterator<Item = &'b Tile> + 'b> {
         Box::new(self.tiles.iter())
     }
 }
