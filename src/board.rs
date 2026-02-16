@@ -26,6 +26,7 @@ impl RectangularBoard {
             row[width - 1] = 1;
         }
 
+        #[allow(clippy::needless_range_loop)]
         for j in 0..width {
             counts[0][j] = 1;
             counts[height - 1][j] = 1;

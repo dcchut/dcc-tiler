@@ -1,6 +1,6 @@
 use crate::board::RectangularBoard;
+use rand::RngExt;
 use rand::seq::IndexedRandom;
-use rand::Rng;
 use simplesvg::{Attr, Color, Fig, Svg};
 use std::collections::{HashMap, HashSet};
 
@@ -24,7 +24,7 @@ pub fn render_single_tiling<S: ::std::hash::BuildHasher>(
     let padding = 10.0;
 
     // TODO: make these configurable
-    let colors = vec![
+    let colors = [
         Color(30, 56, 136),
         Color(71, 115, 170),
         Color(245, 230, 99),

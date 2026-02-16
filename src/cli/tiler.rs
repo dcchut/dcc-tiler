@@ -259,9 +259,7 @@ impl Tiler {
 
             let mut stack = vec![(complete, vec![board])];
 
-            while !stack.is_empty() {
-                let (index, boards) = stack.pop().unwrap();
-
+            while let Some((index, boards)) = stack.pop() {
                 if index == 0 {
                     // render this tiling
                     let tiling = render_single_tiling_from_vec(boards);
