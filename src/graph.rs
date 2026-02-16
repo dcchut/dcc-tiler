@@ -76,10 +76,7 @@ impl BoardGraph {
     pub fn add_edge(&mut self, s: usize, t: usize) {
         assert!(s < self.nodes_arena_index && t < self.nodes_arena_index);
 
-        self.edges.entry(s).or_insert_with(HashSet::new).insert(t);
-        self.rev_edges
-            .entry(t)
-            .or_insert_with(HashSet::new)
-            .insert(s);
+        self.edges.entry(s).or_default().insert(t);
+        self.rev_edges.entry(t).or_default().insert(s);
     }
 }
